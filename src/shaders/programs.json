@@ -59,6 +59,14 @@
         }
     },
 
+    "basic_zshape": {
+        "description": "ZShape instnaced from texture; supports PICKING and OUTLINE modes.",
+        "shaders": {
+            "vertex": "basic/basic_zshape_template.vert",
+            "fragment": "basic/basic_zshape_template.frag"
+        }
+    },
+
     "basic_stripe": {
         "description": "Default gl2 program used for testing.",
         "shaders": {

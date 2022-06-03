@@ -11,6 +11,7 @@ precision mediump float;
 struct DLight {
     //bool directional;
     vec3 position;
+    vec3 direction;
     vec3 color;
 };
 #fi
@@ -28,6 +29,7 @@ struct PLight {
 struct Material {
     vec3 emissive;
     vec3 diffuse;
+    float alpha;
     #if (INSTANCED)
         sampler2D instanceData;
     #fi
@@ -102,6 +104,8 @@ in vec3 fragVPos;
     in vec3 vViewPosition;
 #fi
 
+in vec4 v_VColor;
+
 
 //FUNCTIONS
 //**********************************************************************************************************************
@@ -136,40 +140,8 @@ void main() {
         if ( clipped ) discard;
     #fi
 
-    vec4 color;
+   vec4 color = v_VColor;
 
-
-    // Calculate combined light contribution
-    vec3 combined = ambient + material.emissive;
-
-    #if (DLIGHTS)
-        #for lightIdx in 0 to NUM_DLIGHTS
-            combined += dLights[##lightIdx].color * material.diffuse;
-        #end
-    #fi
-
-    #if (PLIGHTS)
-        #for lightIdx in 0 to NUM_PLIGHTS
-            combined += calcPointLight(pLights[##lightIdx]);
-        #end
-    #fi
-
-    color = vec4(combined, alpha);
-
-    #if (COLORS)
-        color += fragVColor;
-    #fi
-
-    #if (TEXTURE)
-        #for I_TEX in 0 to NUM_TEX
-            color *= texture(material.texture##I_TEX, fragUV);
-        #end
-        #if (TRANSPARENT)
-            if (color.w <= 0.00392) discard;
-            // alternatively, increase fragment depth?
-            // if (texcol.w < 0.25) gl_FragDepth = some larger value, clamped to 1.0; else gl_FragDepth = gl_FragCoord.z;
-        #fi
-    #fi
 
   if (color.w > 0.50) {
 
