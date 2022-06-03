@@ -22,7 +22,7 @@ export class Quad extends Mesh {
 		this.type = "Quad";
 	}
 
-	static makeGeometry(xy0, xy1, flipped, do_normals = true, do_color = true) {
+	static makeGeometry(xy0, xy1, flipped, do_normals = true, do_color = true, do_uv = true) {
 		let geometry = new Geometry();
 
 		// Quad vertices
@@ -36,14 +36,16 @@ export class Quad extends Mesh {
 				], 3
 			);
 			geometry.indices = Uint32Attribute([0, 1, 2, 0, 2, 3], 1);
-			geometry.uv = Float32Attribute(
-				[
-					0, 0,
-					1, 0,
-					1, 1,
-					0, 1
-				], 2
-			);
+			if (do_uv) {
+				geometry.uv = Float32Attribute(
+					[
+						0, 0,
+						1, 0,
+						1, 1,
+						0, 1
+					], 2
+				);
+			}
 		} else {
 			geometry.vertices = Float32Attribute(
 				[
@@ -54,14 +56,16 @@ export class Quad extends Mesh {
 				], 3
 			);
 			geometry.indices = Uint32Attribute([0, 1, 2, 0, 3, 1], 1);
-			geometry.uv = Float32Attribute(
-				[
-					0, 0,
-					1, 1,
-					0, 1,
-					1, 0
-				], 2
-			);
+			if (do_uv) {
+				geometry.uv = Float32Attribute(
+					[
+						0, 0,
+						1, 1,
+						0, 1,
+						1, 0
+					], 2
+				);
+			}
 		}
 		if (do_color)
 			geometry.vertColor = Float32Attribute(
