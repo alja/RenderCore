@@ -63,6 +63,22 @@ export class Stripes extends Mesh {
     get dashed() { return this._dashed; }
 
 
+    update(glManager, camera) {
+        super.update(glManager, camera);
+        let vp = glManager._gl.getParameter(glManager._gl.VIEWPORT);
+        let vdim = vp[2] + vp[3];
+        let ss = 1;
+        
+        if (vdim < 1000)
+            ss = 0.25;
+        else if (vdim < 2000)
+            ss = 0.5;
+
+        for (let m of [ this._material, this._outlineMaterial, this._pickingMaterial ]) {
+            if (m) m.setUniform("halfLineWidth", this._material._lineWidth*0.5*ss);
+        }
+    }
+    
     static assembleGBufferMaterial(args){
         return new CustomShaderMaterial("GBuffer_stripes", 
             {
