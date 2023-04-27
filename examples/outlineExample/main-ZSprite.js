@@ -129,7 +129,7 @@ const CoreControl = {
 
         // AMT ZShape pos
         // Instancing, passing position for each instance in RGBA32F texture, A not used.
-        let sna = 64;
+        let sna = 2;
         let SN = sna * sna * sna;
         let sarr = new Float32Array(SN * 4);
         {
@@ -399,7 +399,8 @@ const CoreControl = {
         zshape.position.set(7, 7, 0);
         zshape.instanced = true;
         zshape.instanceCount = this.tex_insta_num_shape;
-        zshape.drawOutline = false;
+        zshape.drawOutline = true;
+        zshape.outlineMaterial.outline_instances_setup([ 4, 6]);
         scene.add(zshape);
         // AMT end
 

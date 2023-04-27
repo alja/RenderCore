@@ -21,6 +21,13 @@ struct Material {
         #end
     #fi
 };
+    #if (PICK_MODE_UINT)
+        flat out uint InstanceID;
+    #fi
+    #if (OUTLINE)
+        uniform bool u_OutlineGivenInstances;
+        in  int  a_OutlineInstances;
+    #fi
 #fi
 
 
