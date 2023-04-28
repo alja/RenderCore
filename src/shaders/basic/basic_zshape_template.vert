@@ -117,6 +117,7 @@ uniform SLight sLights[##NUM_SLIGHTS];
 uniform vec3 ambient;
 out vec4 v_VColor;
 
+vec3 coldif;
 
 //FUNCTIONS
 //**********************************************************************************************************************
@@ -152,7 +153,8 @@ vec3 calcPointLight (vec3 VPos_viewspace, PLight light, vec3 normal, vec3 viewDi
     float attenuation = light.decay / (light.decay + 0.01f * distance + 0.0001f * (distance * distance));
 
     // Combine results
-    vec3 diffuse  = light.color * diffuseF  * material.diffuse  * attenuation;
+    // vec3 diffuse  = light.color * diffuseF  * material.diffuse  * attenuation;
+    vec3 diffuse  = light.color * diffuseF  * coldif  * attenuation;
 
     return diffuse;
 }
@@ -201,14 +203,22 @@ void main() {
             if (u_OutlineGivenInstances)
                 iID = a_OutlineInstances;
         #fi
+        int pID = 2 * iID; // pixelID
         int   tsx = textureSize(material.instanceData0, 0).x;
-        ivec2 tc  = ivec2(iID % tsx, iID / tsx);
+        ivec2 tc  = ivec2(pID % tsx, pID / tsx);
         vec4  pos = texelFetch(material.instanceData0, tc, 0);
         // see also texelFetchOffset about how to get neigboring texels
+        vec4 scale = texelFetchOffset(material.instanceData0, tc, 0, ivec2(1, 0));
 
         VPos_origin = vec3(pos.x, pos.y, pos.z);
+
+        uint rgba = floatBitsToUint(pos.w);
+        coldif.r = float((uint(0xff0000) & rgba) >> 16) / 255.0;
+        coldif.g = float((uint(0xff00) & rgba) >> 8) / 255.0;
+        coldif.b = float((uint(0xff) & rgba) >> 0) / 255.0;
     #else
         VPos_origin = vec3(0.0, 0.0, 0.0);
+        coldif = material.diffuse;
     #fi
 
     vec4 VPos_viewspace = MVMat * vec4((VPos_origin + vec3(ShapeSize.x, ShapeSize.y, ShapeSize.z) * VPos), 1.0);
