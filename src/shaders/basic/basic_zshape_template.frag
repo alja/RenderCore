@@ -4,9 +4,6 @@ precision mediump float;
 //DEF
 //**********************************************************************************************************************
 
-#define SPRITE_SPACE_WORLD 0.0
-#define SPRITE_SPACE_SCREEN 1.0
-
 #if (DLIGHTS)
 struct DLight {
     //bool directional;
@@ -78,6 +75,10 @@ in vec3 fragVPos;
     layout(location = 0) out vec4 objectID;
 #else if (PICK_MODE_UINT)
     uniform uint u_UINT_ID;
+    #if (INSTANCED)
+        uniform bool u_PickInstance;
+        flat in uint InstanceID;
+    #fi
     layout(location = 0) out uint objectID;
 #else if (OUTLINE)
     // in vec3 v_position_viewspace;
@@ -142,48 +143,25 @@ void main() {
 
    vec4 color = v_VColor;
 
-
-  if (color.w > 0.50) {
-
-    #if (PICK_MODE_RGB)
-        objectID = vec4(u_RGB_ID, 1.0);
-    #else if (PICK_MODE_UINT)
-        #if (PICK_INSTANCE)
-            objectID = uint(gl_InstanceID) + 1; // no +1 if we do white clear
-        #else
-            objectID = u_UINT_ID;
-        #fi
-    #else if (OUTLINE)
+    #if (OUTLINE)
         vn_viewspace = vec4(v_normal_viewspace, 0.0);
         vd_viewspace = vec4(v_ViewDirection_viewspace, 0.0);
         #if (DEPTH)
             de_viewspace = vec4(gl_FragCoord.z, 0.0, 0.0, 1.0);
         #fi
-    #else
-        outColor = color;
-    #fi
-
-  } else {
-
-    #if (PICK_MODE_RGB)
-        objectID = vec4(0.0, 0.0, 0.0, 1.0);
+    #else if (PICK_MODE_RGB)
+        objectID = vec4(u_RGB_ID, 1.0);
     #else if (PICK_MODE_UINT)
-        #if (PICK_INSTANCE)
-            objectID = 0; // no +1 if we do white clear
+        #if (INSTANCED)
+            if (u_PickInstance) {
+                objectID = InstanceID; // 0 is a valid result
+            } else {
+                objectID = u_UINT_ID;
+            }
         #else
-            objectID = 0;
-        #fi
-    #else if (OUTLINE)
-        gl_FragDepth = 1.0;
-        vn_viewspace = vec4(0.0, 0.0, 0.0, 0.0);
-        vd_viewspace = vec4(0.0, 0.0, 0.0, 0.0);
-        #if (DEPTH)
-            de_viewspace = vec4(1.0, 0.0, 0.0, 1.0);
+            objectID = u_UINT_ID;
         #fi
     #else
         outColor = color;
     #fi
-
-  }
-
 }

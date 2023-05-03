@@ -26,8 +26,19 @@ export class ZShapeBasicMaterial extends CustomShaderMaterial {
         this.side = args.side ? args.side : FRONT_AND_BACK_SIDE;
     }
 
-    // clone for picking
-    // AMT ???
+    clone_for_picking() {
+        let o = new ZShapeBasicMaterial( {
+            ShapeSize: this.getUniform("ShapeSize"),
+            color: this.color, emissive: this.emissive, diffuse: this.diffuse,
+            side: this.side
+        } );
+        if (this.hasSBFlag("SCALE_PER_INSTANCE")) o.addSBFlag("SCALE_PER_INSTANCE");
+        for (const m of this.maps) o.addMap(m);
+        o._instanceData = this._instanceData;
+        o.addSBFlag('PICK_MODE_UINT');
+        o.setUniform("u_PickInstance", false);
+        return o;
+    }
 
     clone_for_outline() {
         let o = new ZShapeBasicMaterial( {
@@ -35,6 +46,7 @@ export class ZShapeBasicMaterial extends CustomShaderMaterial {
             color: this.color, emissive: this.emissive, diffuse: this.diffuse,
             side: this.side
         } );
+        if (this.hasSBFlag("SCALE_PER_INSTANCE")) o.addSBFlag("SCALE_PER_INSTANCE");
         for (const m of this.maps) o.addMap(m);
         o._instanceData = this._instanceData;
         o.addSBFlag('OUTLINE');
@@ -73,7 +85,9 @@ export class ZShapeBasicMaterial extends CustomShaderMaterial {
             var update = {uuid: this._uuid, changes: {diffuse: this._diffuse.getHex()}};
             this._onChangeListener.materialUpdate(update)
         }
-    }    // Outline - setup / reset for instance list outlining.
+    }
+
+    // Outline - setup / reset for instance list outlining.
     // To be called on outline version (with OUTLINE SB-flag).
     outline_instances_setup(instance_list) {
         this.setUniform("u_OutlineGivenInstances", true);

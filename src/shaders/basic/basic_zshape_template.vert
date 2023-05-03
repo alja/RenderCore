@@ -21,15 +21,7 @@ struct Material {
         #end
     #fi
 };
-    #if (PICK_MODE_UINT)
-        flat out uint InstanceID;
-    #fi
-    #if (OUTLINE)
-        uniform bool u_OutlineGivenInstances;
-        in  int  a_OutlineInstances;
-    #fi
 #fi
-
 
 //STRUCT
 //**********************************************************************************************************************
@@ -94,6 +86,14 @@ uniform mat3 NMat;  // Normal Matrix
 
 #if (INSTANCED)
     uniform Material material;
+    #if (PICK_MODE_UINT)
+        flat out uint InstanceID;
+    #fi
+    #if (OUTLINE)
+        uniform bool u_OutlineGivenInstances;
+        in  int  a_OutlineInstances;
+    #fi
+
 #fi
 
 #if (OUTLINE)
@@ -130,7 +130,7 @@ vec3 calcDirectLight (DLight light, vec3 normal, vec3 viewDir) {
     float diffuseF = max(dot(normal, lightDir), 0.0f);
 
     // Combine results
-    vec3 diffuse  = light.color * diffuseF * material.diffuse;
+    vec3 diffuse  = light.color * diffuseF * coldif;
 
     return diffuse;
 }
@@ -185,7 +185,7 @@ vec3 calcSpotLight (vec3 VPos_viewspace, SLight light, vec3 normal, vec3 viewDir
     float attenuation = light.decay / (light.decay + 0.01f * distance + 0.0001f * (distance * distance));
 
     // Combine results
-    vec3 diffuse  = light.color * diffuseF  * material.diffuse  * attenuation;
+    vec3 diffuse  = light.color * diffuseF  * coldif  * attenuation;
 
     return diffuse * intensity;
 }
@@ -196,19 +196,21 @@ vec3 calcSpotLight (vec3 VPos_viewspace, SLight light, vec3 normal, vec3 viewDir
 void main() {
     // Position of the origin in viewspace.
     vec3 VPos_origin;
-
+    vec3 VPos_local = vec3(ShapeSize.x, ShapeSize.y, ShapeSize.z) * VPos;
     #if (INSTANCED)
         int iID = gl_InstanceID;
         #if (OUTLINE)
             if (u_OutlineGivenInstances)
                 iID = a_OutlineInstances;
         #fi
-        int pID = 2 * iID; // pixelID
+        #if (SCALE_PER_INSTANCE)
+            int pID = 2 * iID; // pixelID
+        #else
+            int pID = iID; // pixelID
+        #fi
         int   tsx = textureSize(material.instanceData0, 0).x;
         ivec2 tc  = ivec2(pID % tsx, pID / tsx);
         vec4  pos = texelFetch(material.instanceData0, tc, 0);
-        // see also texelFetchOffset about how to get neigboring texels
-        vec4 scale = texelFetchOffset(material.instanceData0, tc, 0, ivec2(1, 0));
 
         VPos_origin = vec3(pos.x, pos.y, pos.z);
 
@@ -216,12 +218,20 @@ void main() {
         coldif.r = float((uint(0xff0000) & rgba) >> 16) / 255.0;
         coldif.g = float((uint(0xff00) & rgba) >> 8) / 255.0;
         coldif.b = float((uint(0xff) & rgba) >> 0) / 255.0;
+
+        #if (SCALE_PER_INSTANCE)
+            vec4 scale = texelFetchOffset(material.instanceData0, tc, 0, ivec2(1, 0));
+            VPos_local *= scale.xyz;
+        #fi
+        #if (PICK_MODE_UINT)
+            InstanceID = uint(iID);
+        #fi
     #else
         VPos_origin = vec3(0.0, 0.0, 0.0);
         coldif = material.diffuse;
     #fi
 
-    vec4 VPos_viewspace = MVMat * vec4((VPos_origin + vec3(ShapeSize.x, ShapeSize.y, ShapeSize.z) * VPos), 1.0);
+    vec4 VPos_viewspace = MVMat * vec4((VPos_origin + VPos_local), 1.0);
 
     // Assume vertices in x,y plane, z = 0; close to (0, 0) as ShapeSize
     // will scale them (for centered sprite there should be a quad with x, y = +-0.5).

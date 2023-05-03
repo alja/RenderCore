@@ -13,26 +13,6 @@ import {Float32Attribute, Uint32Attribute} from '../core/BufferAttribute.js';
 
 export class ZShape extends Mesh {
     constructor(geometry = null, material = null) {
-        if (material === null) {
-            material = new ZShapeBasicMaterial();
-        }
-
-        // MT for Sebastien -- what would be the best way to clone material?
-        // ZShapeBasicMaterial.clone_for_outline() seems OK (but one needs to 
-        // take care with uniform / texture / instanceData updates).
-
-        // let pmat = Object.assign(new ZShapeBasicMaterial(), material);
-        // pmat.addSBFlag('PICK_MODE_UINT'); // should get it from PickingShaderMaterial
-        let pmat = undefined;
-        // let omat = Object.assign(new ZShapeBasicMaterial(), material);
-        // omat.addSBFlag('OUTLINE');
-        let omat = material.clone_for_outline();
-
-        //SUPER
-        super(geometry, material, pmat, omat);
-        this.type = "ZShape";
-
-
         if (geometry === null) {
             /*
             let xy0 = new Vector2(-0.5, 0.5);
@@ -43,6 +23,19 @@ export class ZShape extends Mesh {
            console.log("zshape cube geometry ", geometry);
            this._geometry = geometry;
         }
+
+        if (material === null) {
+            material = new ZShapeBasicMaterial();
+        }
+        // MT for Sebastien -- what would be the best way to clone material?
+        // ZShapeBasicMaterial.clone_for_outline() seems OK (but one needs to 
+        // take care with uniform / texture / instanceData updates).
+        let pmat = material.clone_for_picking();
+        let omat = material.clone_for_outline();
+
+        //SUPER
+        super(geometry, material, pmat, omat);
+        this.type = "ZShape";
     }
 
     static makeCubeGeometry() {
