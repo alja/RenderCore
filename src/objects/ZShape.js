@@ -133,7 +133,7 @@ export class ZShape extends Mesh {
     }
 
     static makeHexagonGeometry() {
-        let vBuff = new Float32Array(7 * 2 * 3);
+        let vBuff = new Float32Array((7 * 2 + 6 * 4 )* 3);
         let stepAngle = Math.PI / 3;
         let R = 1;
         // bottom vertex
@@ -159,29 +159,64 @@ export class ZShape extends Mesh {
             vBuff[ro + 23] = vBuff[ro + 2] + hexHeight;
             ro += 3;
         }
+        
+        // side vertices
+        off = 7*2*3;
+        for (let j = 0; j < 6; ++j) {
+            let angle = j * stepAngle;
+            let x = R * Math.cos(angle);
+            let y = R * Math.sin(angle);
 
-        let protoIdcs = [0,1,2, 0,2,3, 0,3,4, 0,4,5, 0,5,6, 0,6,1];
-        let protoIdcs2 = [2,1,0,  3,2,0,  4,3, 0,   5,4,0,  6, 5, 0,  1, 6, 0];
-        let sideIdcs = [8,1,2,2,9,8,  9,2,3,3,10,9,  10,3,4,4,11,10,
-                        11,4,5,5,12,11,  5,6,13,5,13,12, 13,6,1,1,8,13 ];
-        let idxBuffSize = protoIdcs.length * 2 + sideIdcs.length;
-        let idxBuff = new Uint32Array(idxBuffSize);
-        let b = 0;
-        for (let c = 0; c < protoIdcs.length; c++) {
-            idxBuff[b++] = protoIdcs2[c];
+            vBuff[off    ] = x;
+            vBuff[off + 1] = y;
+            vBuff[off + 2] = 0;
+
+            vBuff[off + 3] = x;
+            vBuff[off + 4] = y;
+            vBuff[off + 5] = hexHeight;
+
+            let x2 = R * Math.cos(angle+ stepAngle);
+            let y2 = R * Math.sin(angle+ stepAngle);
+
+            vBuff[off + 6] = x2;
+            vBuff[off + 7] = y2;
+            vBuff[off + 8] = hexHeight;
+
+            vBuff[off + 9] = x2;
+            vBuff[off + 10] = y2;
+            vBuff[off + 11] = 0;
+
+            off += 12;
         }
+
+        let idxBuffSize = 6*3*2+ 6*6;
+        let idxBuff = new Uint32Array(idxBuffSize);
+        let protoIdcs = [0,1,2, 0,2,3, 0,3,4, 0,4,5, 0,5,6, 0,6,1];
+        let b = 0;
+
+        // top
+        for (let c = 0; c < protoIdcs.length; c++) {
+            idxBuff[b++] = protoIdcs[c];
+        
+        }
+        // bottom
         for (let c = 0; c < protoIdcs.length; c++) {
             idxBuff[b++] = protoIdcs[c] + 7;
         }
-        for (let c = 0; c < sideIdcs.length; c++) {
-            idxBuff[b++] = sideIdcs[c];
+
+        //  sides
+        let protoSide = [0,1,2,2,3,0];
+
+        for (let side = 0; side < 6; ++side) {
+            for (let c = 0; c < protoSide.length; c++) {
+                idxBuff[b++] = 14 + side*4 + protoSide[c];
+            }
         }
 
         let hex = new Geometry();
 		hex.vertices = Float32Attribute(vBuff,3);
 		hex.indices = Uint32Attribute(idxBuff,1);
         hex.computeVertexNormals();
-        // AMT do I need to set uv attributes ???
 
         hex.type = "Cube";// "Hexagon";
         return hex;
