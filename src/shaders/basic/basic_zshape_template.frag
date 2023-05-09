@@ -6,8 +6,6 @@ precision mediump float;
 
 #if (DLIGHTS)
 struct DLight {
-    //bool directional;
-    vec3 position;
     vec3 direction;
     vec3 color;
 };
@@ -115,11 +113,10 @@ in vec4 v_VColor;
     vec3 calcPointLight(PLight light) {
 
         float distance = length(light.position - fragVPos);
-        if(light.distance > 0.0 && distance > light.distance) return vec3(0.0, 0.0, 0.0);
+       //AMT  if(light.distance > 0.0 && distance > light.distance) return vec3(0.0, 0.0, 0.0);
 
         // Attenuation
-        //float attenuation = 1.0f / (1.0f + 0.01f * distance + 0.0001f * (distance * distance));
-        float attenuation = light.decay / (light.decay + 0.01f * distance + 0.0001f * (distance * distance));
+        float attenuation = 1.0f; // light.decay / (light.decay + 0.01f * distance + 0.0001f * (distance * distance));
 
         // Combine results
         vec3 diffuse = light.color * material.diffuse * attenuation;

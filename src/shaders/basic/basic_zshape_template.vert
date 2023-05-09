@@ -102,8 +102,6 @@ out vec3 v_ViewDirection_viewspace;
 #fi
 
 // AMT
-
-
 #if (DLIGHTS)
 uniform DLight dLights[##NUM_DLIGHTS];
 #fi
@@ -141,7 +139,7 @@ vec3 calcDirectLight (DLight light, vec3 normal, vec3 viewDir) {
 vec3 calcPointLight (vec3 VPos_viewspace, PLight light, vec3 normal, vec3 viewDir) {
 
     float distance = length(light.position - VPos_viewspace);
-    if(light.distance > 0.0 && distance > light.distance) return vec3(0.0, 0.0, 0.0);
+  // AMT  if(light.distance > 0.0 && distance > light.distance) return vec3(0.0, 0.0, 0.0);
 
     vec3 lightDir = normalize(light.position - VPos_viewspace);
 
@@ -150,7 +148,7 @@ vec3 calcPointLight (vec3 VPos_viewspace, PLight light, vec3 normal, vec3 viewDi
 
     // Attenuation
     //float attenuation = 1.0f / (1.0f + 0.01f * distance + 0.0001f * (distance * distance));
-    float attenuation = light.decay / (light.decay + 0.01f * distance + 0.0001f * (distance * distance));
+    float attenuation = 1.0f;// AMT light.decay / (light.decay + 0.01f * distance + 0.0001f * (distance * distance));
 
     // Combine results
     // vec3 diffuse  = light.color * diffuseF  * material.diffuse  * attenuation;
@@ -164,7 +162,7 @@ vec3 calcPointLight (vec3 VPos_viewspace, PLight light, vec3 normal, vec3 viewDi
 vec3 calcSpotLight (vec3 VPos_viewspace, SLight light, vec3 normal, vec3 viewDir) {
 
     float distance = length(light.position - VPos_viewspace);
-    if(light.distance > 0.0 && distance > light.distance) return vec3(0.0, 0.0, 0.0);
+   // AMT if(light.distance > 0.0 && distance > light.distance) return vec3(0.0, 0.0, 0.0);
 
     vec3 lightDir = normalize(light.position - VPos_viewspace);
 
@@ -182,7 +180,7 @@ vec3 calcSpotLight (vec3 VPos_viewspace, SLight light, vec3 normal, vec3 viewDir
 
     // Attenuation
     //float attenuation = 1.0f / (1.0f + 0.01f * distance + 0.0001f * (distance * distance));
-    float attenuation = light.decay / (light.decay + 0.01f * distance + 0.0001f * (distance * distance));
+    float attenuation = 1.0f; // light.decay / (light.decay + 0.01f * distance + 0.0001f * (distance * distance));
 
     // Combine results
     vec3 diffuse  = light.color * diffuseF  * coldif  * attenuation;
@@ -276,13 +274,11 @@ void main() {
         #for lightIdx in 0 to NUM_DLIGHTS
             dLight = calcDirectLight(dLights[##lightIdx], normal, viewDir);
             combined.rgb += dLight;
-
         #end
     #fi
     #if (PLIGHTS)
         vec3 pLight;
         float pShadow = 0.0;
-
 
         #for lightIdx in 0 to NUM_PLIGHTS
             pLight = calcPointLight(VPos_viewspace.xyz, pLights[##lightIdx], normal, viewDir);
