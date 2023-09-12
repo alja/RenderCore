@@ -33,6 +33,7 @@ export class ZShapeBasicMaterial extends CustomShaderMaterial {
             side: this.side
         } );
         if (this.hasSBFlag("SCALE_PER_INSTANCE")) o.addSBFlag("SCALE_PER_INSTANCE");
+        if (this.hasSBFlag("MAT4_PER_INSTANCE")) o.addSBFlag("MAT4_PER_INSTANCE");
         for (const m of this.maps) o.addMap(m);
         o._instanceData = this._instanceData;
         o.addSBFlag('PICK_MODE_UINT');
@@ -47,6 +48,7 @@ export class ZShapeBasicMaterial extends CustomShaderMaterial {
             side: this.side
         } );
         if (this.hasSBFlag("SCALE_PER_INSTANCE")) o.addSBFlag("SCALE_PER_INSTANCE");
+        if (this.hasSBFlag("MAT4_PER_INSTANCE")) o.addSBFlag("MAT4_PER_INSTANCE");
         for (const m of this.maps) o.addMap(m);
         o._instanceData = this._instanceData;
         o.addSBFlag('OUTLINE');

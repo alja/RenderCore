@@ -195,13 +195,16 @@ void main() {
     // Position of the origin in viewspace.
     vec3 VPos_origin;
     vec3 VPos_local = vec3(ShapeSize.x, ShapeSize.y, ShapeSize.z) * VPos;
+
     #if (INSTANCED)
         int iID = gl_InstanceID;
         #if (OUTLINE)
             if (u_OutlineGivenInstances)
                 iID = a_OutlineInstances;
         #fi
-        #if (SCALE_PER_INSTANCE)
+        #if (MAT4_PER_INSTANCE)
+            int pID = 4 * iID;
+        #else if (SCALE_PER_INSTANCE)
             int pID = 2 * iID; // pixelID
         #else
             int pID = iID; // pixelID
@@ -229,7 +232,17 @@ void main() {
         coldif = material.diffuse;
     #fi
 
-    vec4 VPos_viewspace = MVMat * vec4((VPos_origin + VPos_local), 1.0);
+    // !!!! make sure to align texture, in C++, to 4 ... the tc extracton below requires that.
+    #if (INSTANCED && MAT4_PER_INSTANCE)
+        mat3 mmat = mat3(texelFetchOffset(material.instanceData0, tc, 0, ivec2(1, 0)).xyz,
+                         texelFetchOffset(material.instanceData0, tc, 0, ivec2(2, 0)).xyz,
+                         texelFetchOffset(material.instanceData0, tc, 0, ivec2(3, 0)).xyz);
+        vec3 mpos = vec3(texelFetchOffset(material.instanceData0, tc, 0, ivec2(0, 0)).xyz);
+        vec3 xpos = mmat * (VPos_local + mpos);
+        vec4 VPos_viewspace = MVMat * vec4(xpos, 1.0);
+    #else
+        vec4 VPos_viewspace = MVMat * vec4((VPos_origin + VPos_local), 1.0);
+    #fi
 
     // Assume vertices in x,y plane, z = 0; close to (0, 0) as ShapeSize
     // will scale them (for centered sprite there should be a quad with x, y = +-0.5).
