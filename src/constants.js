@@ -54,6 +54,10 @@ export const STRIPE_JOIN_ROUND = 3;
 export const TEXT2D_SPACE_WORLD = 0;
 export const TEXT2D_SPACE_SCREEN = 1;
 
+//ZText modes
+export const ZTEXT_SPACE_WORLD = 0;
+export const ZTEXT_SPACE_SCREEN = 1;
+
 // Highpass modes
 export const HIGHPASS_MODE_BRIGHTNESS = 0;
 export const HIGHPASS_MODE_DIFFERENCE = 1;

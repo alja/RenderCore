@@ -100,6 +100,7 @@ export {StripeBasicMaterial} from './materials/StripeBasicMaterial.js';
 export {StripesBasicMaterial} from './materials/StripesBasicMaterial.js';
 export {PointBasicMaterial} from './materials/PointBasicMaterial.js';
 export {Text2DMaterial} from './materials/Text2DMaterial.js';
+export {ZTextMaterial} from './materials/ZTextMaterial.js';
 export {SkyBox2BasicMaterial} from './materials/SkyBox2BasicMaterial.js';
 export {DirectionalShadowMaterial} from './materials/DirectionalShadowMaterial.js';
 export {PointShadowMaterial} from './materials/PointShadowMaterial.js';
@@ -132,6 +133,7 @@ export {Stripes} from './objects/Stripes.js';
 export {StripesGeometry} from './objects/StripesGeometry.js';
 export {VertexNormal} from './objects/VertexNormal.js';
 export {Text2D} from './objects/Text2D.js';
+export {ZText} from './objects/ZText.js';
 export {Grid} from './objects/Grid.js';
 
 // Instanced, instance-pickable, outline-supporting materials and objects
@@ -172,3 +174,11 @@ export {DoFFX} from './renderers/FX/DoFFX.js';
 export {KeyboardInput} from './controls/KeyboardInput.js';
 export {MouseInput} from './controls/MouseInput.js';
 export {GamepadInput} from './controls/GamepadInput.js';
+
+//Fonts 
+export {roboto_font} from '../examples/common/textures/fonts/roboto.js';
+export {roboto_bold_font} from '../examples/common/textures/fonts/roboto-bold.js';
+export {ubuntu_font} from '../examples/common/textures/fonts/ubuntu.js';
+export {ubuntu_bold_font} from '../examples/common/textures/fonts/ubuntu-bold.js';
+export {dejavu_font} from '../examples/common/textures/fonts/dejavu-serif.js';
+export {dejavu_italic_font} from '../examples/common/textures/fonts/dejavu-serif-italic.js';
