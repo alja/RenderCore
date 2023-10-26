@@ -37,8 +37,6 @@ out vec2  sdf_texel;
 
 void main() {
     if(MODE == TEXT2D_SPACE_SCREEN){
-        //vec2 viewportHalfSize = vec2(1280, 720) * 0.5;
-        vec2 viewportHalfSize = viewport * 0.5;
         vec2 VPosNew = VPos;
         //map [0, x][0, y] to [-1, 1][-1, 1]
         if(offset.x != 0.0 && offset.y != 0.0)
@@ -46,7 +44,7 @@ void main() {
             VPosNew = VPos + offset;
         }
 
-        vec2 VPos_clipspace = (VPosNew - viewportHalfSize) / viewportHalfSize;
+        vec2 VPos_clipspace = (VPosNew - viewport) / viewport;
 
         // Vertex position in clip space
         gl_Position = vec4(VPos_clipspace, 0.0, 1.0);
