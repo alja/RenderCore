@@ -6,11 +6,12 @@ import {FRONT_AND_BACK_SIDE, HIGHPASS_MODE_BRIGHTNESS, HIGHPASS_MODE_DIFFERENCE}
 
 export class RendeQuTor
 {
-    constructor(renderer, scene, camera)
+    constructor(renderer, scene, camera, overlay_scene)
     {
         this.renderer = renderer;
         this.scene    = scene;
         this.camera   = camera;
+        this.ovlscene = overlay_scene;
         this.queue    = new RenderQueue(renderer);
         this.pqueue   = new RenderQueue(renderer);
         this.vp_w = 0;
@@ -48,6 +49,8 @@ export class RendeQuTor
         this.make_RP_Outline();
 
         this.make_RP_GaussHVandBlend();
+
+        this.make_RP_Overlay();
 
         // Only one of the next two gets called from the driver.
         this.make_RP_ToScreen();
@@ -181,6 +184,26 @@ export class RendeQuTor
             this.tex_final = tex_main;
             this.tex_final_push = main_is_std;
         }
+    }
+
+    render_overlay_and_blend_it()
+    {
+        let tex_ovl = this.pop_std_texture();
+        this.RP_Overlay.outTextures[0].id = tex_ovl;
+        this.queue.render_pass(this.RP_Overlay, "Overlay");
+
+        let ovl_final = this.pop_std_texture();
+        // Reuse blending pass from outline merging.
+        this.RP_Blend.intex_outline_blurred = tex_ovl;
+        this.RP_Blend.intex_main = tex_final;
+        this.RP_Blend.outTextures[0].id = ovl_final;
+        this.queue.render_pass(this.RP_Blend, "Blend Overlay");
+
+        if (this.tex_final_push) {
+            this.push_std_texture(this.tex_final);
+        }
+        this.tex_final = tex_ovl;
+        this.tex_final_push = true;
     }
 
     render_tone_map_to_screen()
@@ -440,6 +463,35 @@ export class RendeQuTor
         this.queue.pushRenderPass(this.RP_SSAA_Down);
     }
 
+    make_RP_Overlay()
+    {
+        let pthis = this;
+
+        this.RP_Overlay = new RenderPass(
+            // Rendering pass type
+            RenderPass.BASIC,
+            // Initialize function
+            function (textureMap, additionalData) {},
+            // Preprocess function
+            function (textureMap, additionalData) { return { scene: pthis.ovlscene, camera: pthis.camera }; },
+            // Postprocess
+            function (textureMap, additionalData) {},
+            // Target
+            RenderPass.TEXTURE,
+            // Viewport
+            null,
+            // Bind depth texture to this ID
+            "depth_main",
+            // Outputs
+            [ { id: "color_overlay", textureConfig: RenderPass.DEFAULT_RGBA16F_TEXTURE_CONFIG } ]
+        );
+        this.RP_Overlay.view_setup = function (vport) {
+             this.viewport = { width: vport.width, height: vport.height };
+            };
+
+        this.queue.pushRenderPass(this.RP_Overlay);
+    }
+
     //=============================================================================
 
     make_RP_ToScreen()
@@ -645,7 +697,7 @@ export class RendeQuTor
                 {id: "color_final", textureConfig: RenderPass.DEFAULT_RGBA16F_TEXTURE_CONFIG}
             ]
         );
-        this.RP_Blend.intex_outline_blurred = "gauss_hv";
+        this.RP_Blend.intex_outline_blurred = "gauss_hv"; // or overlay
         this.RP_Blend.intex_main = "color_main";
         this.RP_Blend.view_setup = function (vport) { this.viewport = vport; };
 
