@@ -14,6 +14,7 @@ export class RendeQuTor
         this.ovlscene = overlay_scene;
         this.queue    = new RenderQueue(renderer);
         this.pqueue   = new RenderQueue(renderer);
+        this.overlaypqueue   = new RenderQueue(renderer);
         this.vp_w = 0;
         this.vp_h = 0;
         this.pick_radius = 32;
@@ -21,8 +22,13 @@ export class RendeQuTor
 
         this.make_PRP_plain();
         this.make_PRP_depth2r();
+
+        this.make_PRP_overlay();
+        this.make_PRP_depth2r_overlay();
+
         this.renderer.preDownloadPrograms(
-          [ this.PRP_depth2r_mat.requiredProgram(this.renderer)
+          [ this.PRP_depth2r_mat.requiredProgram(this.renderer),
+            this.PRP_depth2r_overlay_mat.requiredProgram(this.renderer)
           ]);
 
         this.SSAA_value = 1;
@@ -195,14 +201,14 @@ export class RendeQuTor
         let ovl_final = this.pop_std_texture();
         // Reuse blending pass from outline merging.
         this.RP_Blend.intex_outline_blurred = tex_ovl;
-        this.RP_Blend.intex_main = tex_final;
+        this.RP_Blend.intex_main = this.tex_final;
         this.RP_Blend.outTextures[0].id = ovl_final;
         this.queue.render_pass(this.RP_Blend, "Blend Overlay");
 
         if (this.tex_final_push) {
             this.push_std_texture(this.tex_final);
         }
-        this.tex_final = tex_ovl;
+        this.tex_final = ovl_final;
         this.tex_final_push = true;
     }
 
@@ -310,6 +316,46 @@ export class RendeQuTor
         return state;
     }
 
+    pick_overlay(x, y, detect_depth = false)
+    {
+        this.renderer.pick_setup(this.pick_center, this.pick_center);
+
+        let state = this.overlaypqueue.render();
+        state.x = x;
+        state.y = y;
+        state.depth = -1.0;
+        state.object = this.renderer.pickedObject3D;
+        console.log("RenderQuTor::pick_overlay", state);
+
+        if (detect_depth && this.renderer.pickedObject3D !== null)
+        {
+            let rdr = this.renderer;
+            let gl  = rdr.gl;
+            let fbm = rdr.glManager._fboManager;
+
+            fbm.bindFramebuffer(this.overlaypqueue._renderTarget);
+
+            // Type RED is not supported on Firefox, specs require RGBA so we
+            // read that, 3 x 3 pixels x 4 channels.
+            let d = new Float32Array(9*4);
+            gl.readBuffer(gl.COLOR_ATTACHMENT0);
+            gl.readPixels(this.pick_center - 1, this.pick_center - 1, 3, 3, gl.RGBA, gl.FLOAT, d);
+
+            fbm.unbindFramebuffer();
+
+            let near = this.camera.near;
+            let far  = this.camera.far;
+            for (let i = 0; i < 9; ++i) {
+                // NOTE: we are reducing into first 3 x 3 elements, dropping GBA channels.
+                d[i] = (near * far) / ((near - far) * d[4*i] + far);
+            }
+            state.depth = d[4];
+            // console.log("    pick depth at", x, ",", y, ":", d);
+        }
+
+        return state;
+    }
+
     pick_instance(state)
     {
         if (state.object !== this.renderer.pickedObject3D) {
@@ -324,6 +370,22 @@ export class RendeQuTor
         }
         return state;
     }
+
+    pick_instance_overlay(state) // Do I need this ??? @Waad
+    {
+        if (state.object !== this.renderer.pickedObject3D) {
+            console.error("RendeQuTor::pick_instance state mismatch", state, this.renderer.pickedObject3D);
+        } else {
+            // console.log("RenderQuTor::pick_instance going for secondary select");
+
+            this.renderer._pickSecondaryEnabled = true;
+            this.overlaypqueue.render();
+
+            state.instance = this.renderer._pickedID;
+        }
+        return state;
+    }
+
 
 
     //=============================================================================
@@ -372,6 +434,50 @@ export class RendeQuTor
         );
 
         this.pqueue.pushRenderPass(this.PRP_depth2r);
+    }
+
+    make_PRP_overlay()
+    {
+        let pthis = this;
+
+        this.PRP_overlay = new RenderPass(
+            RenderPass.BASIC,
+            function (textureMap, additionalData) {},
+            function (textureMap, additionalData) {
+                return { scene: pthis.ovlscene, camera: pthis.camera };
+            },
+            function (textureMap, additionalData) {},
+            RenderPass.TEXTURE,
+            { width: this.pick_radius, height: this.pick_radius },
+            "depth_picking_overlay",
+            [ { id: "color_picking_overlay", textureConfig: RenderPass.DEFAULT_R32UI_TEXTURE_CONFIG,
+                clearColorArray: new Uint32Array([0xffffffff, 0, 0, 0]) } ]
+        );
+
+        this.overlaypqueue.pushRenderPass(this.PRP_overlay);
+    }
+
+    make_PRP_depth2r_overlay()
+    {
+        this.PRP_depth2r_overlay_mat = new CustomShaderMaterial("copyDepthToRed");
+        this.PRP_depth2r_overlay_mat.lights = false;
+        let pthis = this;
+
+        this.PRP_depth2r_overlay = new RenderPass(
+            RenderPass.POSTPROCESS,
+            function (textureMap, additionalData) {},
+            function (textureMap, additionalData) {
+                return { material: pthis.PRP_depth2r_overlay_mat, textures: [ textureMap["depth_picking_overlay"] ] };
+            },
+            function (textureMap, additionalData) {},
+            RenderPass.TEXTURE,
+            { width: this.pick_radius, height: this.pick_radius },
+            null,
+            [ { id: "depthr32f_picking_overlay", textureConfig: RenderPass.FULL_FLOAT_R32F_TEXTURE_CONFIG,
+                clearColorArray: new Float32Array([1, 0, 0, 0]) } ]
+        );
+
+        this.overlaypqueue.pushRenderPass(this.PRP_depth2r_overlay);
     }
 
 
