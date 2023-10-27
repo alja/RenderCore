@@ -451,7 +451,7 @@ export class RendeQuTor
             { width: this.pick_radius, height: this.pick_radius },
             "depth_picking_overlay",
             [ { id: "color_picking_overlay", textureConfig: RenderPass.DEFAULT_R32UI_TEXTURE_CONFIG,
-                clearColorArray: new Uint32Array([0xffffffff, 0, 0, 0]) } ]
+                clearColorArray: this.clear_zero_f32arr } ]
         );
 
         this.overlaypqueue.pushRenderPass(this.PRP_overlay);
@@ -589,7 +589,8 @@ export class RendeQuTor
             // Bind depth texture to this ID
             "depth_main",
             // Outputs
-            [ { id: "color_overlay", textureConfig: RenderPass.DEFAULT_RGBA16F_TEXTURE_CONFIG } ]
+            [ { id: "color_overlay", textureConfig: RenderPass.DEFAULT_RGBA16F_TEXTURE_CONFIG,
+                clearColorArray: this.clear_zero_f32arr } ]
         );
         this.RP_Overlay.view_setup = function (vport) {
              this.viewport = { width: vport.width, height: vport.height };
