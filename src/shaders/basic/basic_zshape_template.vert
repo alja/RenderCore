@@ -193,7 +193,7 @@ vec3 calcSpotLight (vec3 VPos_viewspace, SLight light, vec3 normal, vec3 viewDir
 //**********************************************************************************************************************
 void main() {
     // Position of the origin in viewspace.
-    vec3 VPos_origin;
+    vec3 VPos_final;
     vec3 VPos_local = vec3(ShapeSize.x, ShapeSize.y, ShapeSize.z) * VPos;
 
     #if (INSTANCED)
@@ -213,8 +213,6 @@ void main() {
         ivec2 tc  = ivec2(pID % tsx, pID / tsx);
         vec4  pos = texelFetch(material.instanceData0, tc, 0);
 
-        VPos_origin = vec3(pos.x, pos.y, pos.z);
-
         uint rgba = floatBitsToUint(pos.w);
         coldif.r = float((uint(0xff0000) & rgba) >> 16) / 255.0;
         coldif.g = float((uint(0xff00) & rgba) >> 8) / 255.0;
@@ -222,27 +220,24 @@ void main() {
 
         #if (SCALE_PER_INSTANCE)
             vec4 scale = texelFetchOffset(material.instanceData0, tc, 0, ivec2(1, 0));
-            VPos_local *= scale.xyz;
+            VPos_final = pos.xyz + VPos_local * scale.xyz;
+        #else if (MAT4_PER_INSTANCE)
+            mat3 mmat = mat3(texelFetchOffset(material.instanceData0, tc, 0, ivec2(1, 0)).xyz,
+                             texelFetchOffset(material.instanceData0, tc, 0, ivec2(2, 0)).xyz,
+                             texelFetchOffset(material.instanceData0, tc, 0, ivec2(3, 0)).xyz);
+            VPos_final = pos.xyz + mmat * VPos_local;
+        #else
+            VPos_final = pos.xyz + VPos_local;
         #fi
         #if (PICK_MODE_UINT)
             InstanceID = uint(iID);
         #fi
     #else
-        VPos_origin = vec3(0.0, 0.0, 0.0);
+        VPos_final = VPos_local;
         coldif = material.diffuse;
     #fi
 
-    // !!!! make sure to align texture, in C++, to 4 ... the tc extracton below requires that.
-    #if (INSTANCED && MAT4_PER_INSTANCE)
-        mat3 mmat = mat3(texelFetchOffset(material.instanceData0, tc, 0, ivec2(1, 0)).xyz,
-                         texelFetchOffset(material.instanceData0, tc, 0, ivec2(2, 0)).xyz,
-                         texelFetchOffset(material.instanceData0, tc, 0, ivec2(3, 0)).xyz);
-        vec3 mpos = vec3(texelFetchOffset(material.instanceData0, tc, 0, ivec2(0, 0)).xyz);
-        vec3 xpos = mmat * (VPos_local + mpos);
-        vec4 VPos_viewspace = MVMat * vec4(xpos, 1.0);
-    #else
-        vec4 VPos_viewspace = MVMat * vec4((VPos_origin + VPos_local), 1.0);
-    #fi
+    vec4 VPos_viewspace = MVMat * vec4(VPos_final, 1.0);
 
     // Assume vertices in x,y plane, z = 0; close to (0, 0) as ShapeSize
     // will scale them (for centered sprite there should be a quad with x, y = +-0.5).
@@ -277,7 +272,11 @@ void main() {
     // define colors for fragment shader
     //
     vec4 combined = vec4(ambient + material.emissive, material.alpha);
+#if (MAT4_PER_INSTANCE)
+    vec3 normal = normalize(NMat * mmat * VNorm);
+#else
     vec3 normal = normalize(NMat * VNorm);
+#fi
     vec3 viewDir = normalize(-VPos_viewspace.xyz);
 
     #if (DLIGHTS)
