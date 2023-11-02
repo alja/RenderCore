@@ -20,7 +20,6 @@ export class ZText extends Mesh{
         this._fontTexture = args.fontTexture !== undefined ? args.fontTexture : null;
         this._xPos = args.xPos !== undefined ? args.xPos : 0;
         this._yPos = args.yPos !== undefined ? args.yPos : 0;
-        this._position = new Vector3(this._xPos, this._yPos, 1);
         this._cellAspect = args.cellAspect !== undefined ? args.cellAspect : 1;
         this._mode = args.mode !== undefined ? args.mode : ZTEXT_SPACE_SCREEN;
         this._fontHinting = 1.0;
@@ -29,11 +28,14 @@ export class ZText extends Mesh{
         this._sdf_tex_width = args.sdf_tex_width !== undefined ? args.sdf_tex_width : 0;
         this._sdf_tex_height = args.sdf_tex_height !== undefined ? args.sdf_tex_height : 0;
 
+        this._finalOffsetX = 0;
+        this._finalOffsetY = 0;
+
         //TODO refactor this
         if (this._mode === ZTEXT_SPACE_SCREEN){
             this._fontSize = args.fontSize !== undefined ? args.fontSize : 40;
             var font_metrics = ZText._fontMetrics( this._font, this._fontSize, this._fontSize * 0.2 );
-            this.geometry = this.setText2D(this._text, this._position.x, this._position.y, font_metrics, this._font);
+            this.geometry = this.setText2D(this._text, this._xPos, this._yPos, font_metrics, this._font);
             this.material = new ZTextMaterial("ZText", {}, {"scale": ZText._setupScaleScreenMode(args.text, font_metrics, args.font)});
             // Uniforms aspect and viewport set by MeshRenderer based on actual viewport
             this.material.setUniform("MODE", ZTEXT_SPACE_SCREEN);
@@ -42,6 +44,8 @@ export class ZText extends Mesh{
             this.material.setUniform("sdf_border_size", this._font.iy);
             this.material.setUniform("hint_amount", this._fontHinting);
             this.material.setUniform("offset", [0,0]);
+            this.material.setUniform("FinalOffset", [0,0]);
+
 
             this.material.color = args.color;
 
@@ -104,6 +108,12 @@ export class ZText extends Mesh{
 
     setOffset(offset){
         this.material.setUniform("offset", offset);
+    }
+
+    setNewPositionOffset(x, y){
+        this._finalOffsetX = this._finalOffsetX + x;
+        this._finalOffsetY = this._finalOffsetY + y;
+        this.material.setUniform("FinalOffset", [this._finalOffsetX, this._finalOffsetY]);
     }
 
     static _assembleGeometry(args){
@@ -274,7 +284,6 @@ export class ZText extends Mesh{
             textScale[c*4 + 3] = scale;
 
         }
-        console.log("textScale",textScale);
         return new Float32Attribute(textScale, 1);
     }
 
@@ -314,7 +323,6 @@ export class ZText extends Mesh{
             textScale.push(scale);
 
         }
-        console.log("textScale",textScale);
         return new Float32Attribute(textScale, 1);
     }
 
@@ -327,6 +335,8 @@ export class ZText extends Mesh{
         material.setUniform("sdf_border_size", args.sdf_border_size);
         material.setUniform("hint_amount", args.fontHinting);
         material.setUniform("offset", [0,0]);
+        material.setUniform("FinalOffset", [0,0]);
+
 
 
 
@@ -376,7 +386,6 @@ export class ZText extends Mesh{
             // Low case chars use their own scale
             var scale = lowcase ? font_metrics.low_scale : font_metrics.cap_scale;
 
-            console.log("scale", scale)
             
             var g      = font_char.rect;
 
@@ -384,8 +393,6 @@ export class ZText extends Mesh{
             var top    = bottom   + scale * ( font.row_height);
             var left   = cpos[0]   + font.aspect * scale * ( font_char.bearing_x + kern -  font.ix );
 
-            console.log("bottom", bottom);
-            console.log("top", top);
             
             var right  = left     + font.aspect * scale * ( g[2] - g[0] );
             var p = [ left, top, right, bottom ];
@@ -428,12 +435,6 @@ export class ZText extends Mesh{
         var cap_scale   = pixel_size / font.cap_height;
         var low_scale   = Math.round( font.x_height * cap_scale ) / font.x_height;
 
-        console.log("pixel_size", pixel_size);
-        console.log("cap_height", font.cap_height);
-
-        console.log("cap_scale", cap_scale);
-        console.log("low_scale", low_scale);
-        
         // Ascent should be a whole number since it's used to calculate the baseline
         // position which should lie at the pixel boundary
         var ascent      = Math.round( font.ascent * cap_scale );

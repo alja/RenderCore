@@ -15,6 +15,7 @@ uniform float aspect;
 uniform vec2 viewport;
 uniform float MODE;
 uniform vec2 offset;
+uniform vec2 FinalOffset;
 
 
 // SDF Uniforms
@@ -37,11 +38,13 @@ out vec2  sdf_texel;
 
 void main() {
     if(MODE == TEXT2D_SPACE_SCREEN){
-        vec2 VPosNew = VPos;
+        vec2 VPosNew = VPos + FinalOffset;
         //map [0, x][0, y] to [-1, 1][-1, 1]
+
         if(offset.x != 0.0 && offset.y != 0.0)
         {
-            VPosNew = VPos + offset;
+            VPosNew = VPosNew + offset;
+            
         }
 
         vec2 VPos_clipspace = (VPosNew - viewport) / viewport;
