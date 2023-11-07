@@ -13,13 +13,15 @@ export class ZText extends Mesh{
         super();
         this.type = "ZText";
         this.frustumCulled = false;
-
         this.pickable = true;
+        this.screenW = args.screenW !== undefined ? args.screenW : 1425;
+        this.screenH = args.screenH !== undefined ? args.screenH : 822;
+        this.screenD = Math.sqrt(Math.pow(this.screenW, 2) + Math.pow(this.screenH, 2));
 
         this._text = args.text !== undefined ? args.text : "New text";
         this._fontTexture = args.fontTexture !== undefined ? args.fontTexture : null;
-        this._xPos = args.xPos !== undefined ? args.xPos : 0;
-        this._yPos = args.yPos !== undefined ? args.yPos : 0;
+        this._xPos = args.xPos !== undefined ? (args.xPos*this.screenW) : 0;
+        this._yPos = args.yPos !== undefined ? (args.yPos*this.screenH) : 0;
         this._cellAspect = args.cellAspect !== undefined ? args.cellAspect : 1;
         this._mode = args.mode !== undefined ? args.mode : ZTEXT_SPACE_SCREEN;
         this._fontHinting = 1.0;
@@ -33,7 +35,7 @@ export class ZText extends Mesh{
 
         //TODO refactor this
         if (this._mode === ZTEXT_SPACE_SCREEN){
-            this._fontSize = args.fontSize !== undefined ? args.fontSize : 40;
+            this._fontSize = args.fontSize !== undefined ? (args.fontSize*this.screenD) : 40;
             var font_metrics = ZText._fontMetrics( this._font, this._fontSize, this._fontSize * 0.2 );
             this.geometry = this.setText2D(this._text, this._xPos, this._yPos, font_metrics, this._font);
             this.material = new ZTextMaterial("ZText", {}, {"scale": ZText._setupScaleScreenMode(args.text, font_metrics, args.font)});
@@ -51,7 +53,7 @@ export class ZText extends Mesh{
 
             this.material.addMap(this._fontTexture);
         }else if (this._mode === ZTEXT_SPACE_WORLD){
-            this._fontSize = args.fontSize !== undefined ? args.fontSize/8 : 40/8;     
+            this._fontSize = args.fontSize !== undefined ? (args.fontSize*this.screenD) : 40;     
             this.geometry = ZText._assembleGeometry({text: this._text, fontSize: this._fontSize, font: this._font});
             this.material = ZText._assembleMaterial(
                 {text: this._text, fontSize: this._fontSize, font: this._font,
@@ -392,18 +394,18 @@ export class ZText extends Mesh{
             var bottom = baseline - scale * ( font.descent + font.iy );
             var top    = bottom   + scale * ( font.row_height);
             var left   = cpos[0]   + font.aspect * scale * ( font_char.bearing_x + kern -  font.ix );
-
-            
             var right  = left     + font.aspect * scale * ( g[2] - g[0] );
-            var p = [ left, top, right, bottom ];
+
+
+
 
             //POSITIONs
-            vertices_positions.push(left, top);
-            vertices_positions.push(left, bottom);
-            vertices_positions.push(right, top);
-            vertices_positions.push(right, top);
-            vertices_positions.push(left, bottom);
-            vertices_positions.push(right, bottom);
+            vertices_positions.push(left/this.screenW, top/this.screenH);
+            vertices_positions.push(left/this.screenW, bottom/this.screenH);
+            vertices_positions.push(right/this.screenW, top/this.screenH);
+            vertices_positions.push(right/this.screenW, top/this.screenH);
+            vertices_positions.push(left/this.screenW, bottom/this.screenH);
+            vertices_positions.push(right/this.screenW, bottom/this.screenH);
 
             //UVs
             vertices_uvs.push(g[0], 1- g[1]);

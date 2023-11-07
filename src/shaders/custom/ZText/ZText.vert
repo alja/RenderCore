@@ -38,19 +38,19 @@ out vec2  sdf_texel;
 
 void main() {
     if(MODE == TEXT2D_SPACE_SCREEN){
-        vec2 VPosNew = VPos + FinalOffset;
-        //map [0, x][0, y] to [-1, 1][-1, 1]
 
+        vec2 VPosNew = VPos + FinalOffset;
         if(offset.x != 0.0 && offset.y != 0.0)
         {
             VPosNew = VPosNew + offset;
             
         }
-
-        vec2 VPos_clipspace = (VPosNew - viewport) / viewport;
+        //map [0, 1][0, 1] to [-1, 1][-1, 1]
+        vec2 VPos_clipspace = (VPosNew * vec2(2.0))-vec2(1.0);
 
         // Vertex position in clip space
         gl_Position = vec4(VPos_clipspace, 0.0, 1.0);
+        
     }else if (MODE == TEXT2D_SPACE_WORLD){
         vec4 VPos_clipspace = MVPMat * vec4(VPos.xy, 0.0, 1.0);
         vec3 VPos_NDC = VPos_clipspace.xyz / VPos_clipspace.w;
