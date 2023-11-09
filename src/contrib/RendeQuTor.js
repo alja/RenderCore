@@ -451,7 +451,7 @@ export class RendeQuTor
             { width: this.pick_radius, height: this.pick_radius },
             "depth_picking_overlay",
             [ { id: "color_picking_overlay", textureConfig: RenderPass.DEFAULT_R32UI_TEXTURE_CONFIG,
-                clearColorArray: this.clear_zero_f32arr } ]
+                clearColorArray:  new Uint32Array([0xffffffff, 0, 0, 0])} ]
         );
 
         this.overlaypqueue.pushRenderPass(this.PRP_overlay);
