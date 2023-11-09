@@ -103,6 +103,10 @@ export class ZText extends Mesh{
     }
     set fontSize(fontSize){
         this._fontSize = fontSize;
+        var font_metrics = ZText._fontMetrics( this._font, this._fontSize, this._fontSize * 0.2 );
+        this.geometry = this.setText2D(this._text, this._xPos, this._yPos, font_metrics, this._font);
+        this.material.setAttribute("scale", ZText._setupScaleScreenMode(this._text, font_metrics, this._font));
+
     }
     get fontSize(){
         return this._fontSize;
