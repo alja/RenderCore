@@ -218,7 +218,64 @@ export class ZShape extends Mesh {
 		hex.indices = Uint32Attribute(idxBuff,1);
         hex.computeVertexNormals();
 
-        hex.type = "Cube";// "Hexagon";
+        hex.type = "Hexagon";
         return hex;
+    }
+
+    // Tesselate cone. Note: main cone axis are aligned with z axis
+    static makeConeGeometry() {
+        //
+        // vertices
+        //
+        let nStep = 12;
+        let vBuff = new Float32Array((nStep + 1) * 3);
+
+        // apex cone at the center
+        vBuff[0] = vBuff[1] = vBuff[2] = 0;
+
+        // plate vertices
+        let stepAngle = 2 * Math.PI / nStep;
+        let H = 1.0;
+        let R = 1.0;
+        let off = 3;
+        for (let i = 0; i < nStep; ++i) {
+            let angle = i * stepAngle;
+            let x = R * Math.cos(angle);
+            let y = R * Math.sin(angle);
+
+            vBuff[off    ] = H;
+            vBuff[off + 1] = y;
+            vBuff[off + 2] = x;
+
+            off += 3;
+        }
+
+        //
+        // indices
+        //
+        let idxBuffSize = nStep * 3;
+        let lastIdx = idxBuffSize - 1;
+        let idxBuff = new Uint32Array(idxBuffSize);
+        // make polygon for each angle step
+        let b  = 0;
+        for (let i = 0; i < nStep; ++i) {
+            idxBuff[b++] = 0;
+            idxBuff[b++] = i + 1;
+            if (b == lastIdx)
+                idxBuff[b++] = 1
+            else
+                idxBuff[b++] = i + 2;
+        }
+
+        //
+        // Geometry
+        //
+        let cone = new Geometry();
+        cone.vertices = Float32Attribute(vBuff,3);
+        cone.indices = Uint32Attribute(idxBuff,1);
+        // cone.computeVertexNormals();
+
+        cone.type = "Cone";
+        return cone;
     }
 }
