@@ -243,12 +243,13 @@ export class ZShape extends Mesh {
             let x = R * Math.cos(angle);
             let y = R * Math.sin(angle);
 
-            vBuff[off    ] = H;
+            vBuff[off    ] = x;
             vBuff[off + 1] = y;
-            vBuff[off + 2] = x;
+            vBuff[off + 2] = H;
 
             off += 3;
         }
+
 
         //
         // indices
