@@ -227,8 +227,8 @@ export class ZShape extends Mesh {
         //
         // vertices
         //
-        let nStep = 24;
-        let vBuff = new Float32Array((nStep + 2) * 3);
+        let nStep = 15;
+        let vBuff = new Float32Array((nStep * 2 + 2) * 3);
 
         // apex cone at the center
         vBuff[0] = vBuff[1] = vBuff[2] = 0;
@@ -255,6 +255,20 @@ export class ZShape extends Mesh {
         vBuff[off + 1] = 0;
         vBuff[off + 2] = H;
 
+        off += 3;
+        // duplicate vertices
+        for (let i = 0; i < nStep; ++i) {
+            let angle = i * stepAngle;
+            let x = R * Math.cos(angle);
+            let y = R * Math.sin(angle);
+
+            vBuff[off    ] = x;
+            vBuff[off + 1] = y;
+            vBuff[off + 2] = H;
+
+            off += 3;
+        }
+
         //
         // indices
         //
@@ -278,11 +292,11 @@ export class ZShape extends Mesh {
             let lvx = nStep + 1;
             for (let i = 0; i < nStep; ++i) {
                 idxBuff[b++] = lvx;
-                idxBuff[b++] = i + 1;
+                idxBuff[b++] = lvx + i + 1;
                 if (b == (idxBuffSize - 1))
-                    idxBuff[b++] = 1
+                    idxBuff[b++] = lvx + 1
                 else
-                    idxBuff[b++] = i + 2;
+                    idxBuff[b++] = lvx + i + 2;
 
             }
         }
