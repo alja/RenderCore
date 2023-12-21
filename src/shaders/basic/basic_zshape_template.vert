@@ -20,6 +20,12 @@ struct Material {
             sampler2D texture##I_TEX;
         #end
     #fi
+
+    // AMT ADD
+    vec3 specular;
+    float shininess;
+
+    bool blinn;
 };
 #fi
 
@@ -33,10 +39,24 @@ struct DLight {
 #fi
 #if (PLIGHTS)
 struct PLight {
+    //bool directional;
     vec3 position;
+    vec3 position_worldspace;
     vec3 color;
     float distance;
-    float decay;
+    //float decay;
+
+    mat4 VPMat;
+    samplerCube shadowmap;
+    bool castShadows;
+    bool hardShadows;
+    float minBias;
+    float maxBias;
+    float shadowFar;
+
+    float constant;
+    float linear;
+    float quadratic;
 };
 #fi
 #if (SLIGHTS)
@@ -64,8 +84,8 @@ uniform mat3 NMat;  // Normal Matrix
 
 #if (COLORS)
     in vec4 VColor;
-    out vec4 fragVColor;
 #fi
+out vec4 fragVColor; // AMT take it outfrom COLORS define
 
 #if (TEXTURE)
     in vec2 uv;
@@ -74,6 +94,9 @@ uniform mat3 NMat;  // Normal Matrix
 
 #if (PLIGHTS)
     out vec3 fragVPos;
+#fi
+#if (!NORMAL_MAP && !NORMAL_FLAT)
+out vec3 fragVNorm;
 #fi
 
 #if (POINTS)
@@ -112,9 +135,8 @@ uniform PLight pLights[##NUM_PLIGHTS];
 uniform SLight sLights[##NUM_SLIGHTS];
 #fi
 
-uniform vec3 ambient;
-out vec4 v_VColor;
 
+uniform vec3 ambient;
 vec3 coldif;
 
 //FUNCTIONS
@@ -134,29 +156,6 @@ vec3 calcDirectLight (DLight light, vec3 normal, vec3 viewDir) {
 }
 #fi
 
-#if (PLIGHTS)
-// Calculates the point light color contribution
-vec3 calcPointLight (vec3 VPos_viewspace, PLight light, vec3 normal, vec3 viewDir) {
-
-    float distance = length(light.position - VPos_viewspace);
-  // AMT  if(light.distance > 0.0 && distance > light.distance) return vec3(0.0, 0.0, 0.0);
-
-    vec3 lightDir = normalize(light.position - VPos_viewspace);
-
-    // Difuse
-    float diffuseF = max(dot(lightDir, normal), 0.0f);
-
-    // Attenuation
-    //float attenuation = 1.0f / (1.0f + 0.01f * distance + 0.0001f * (distance * distance));
-    float attenuation = 1.0f;// AMT light.decay / (light.decay + 0.01f * distance + 0.0001f * (distance * distance));
-
-    // Combine results
-    // vec3 diffuse  = light.color * diffuseF  * material.diffuse  * attenuation;
-    vec3 diffuse  = light.color * diffuseF  * coldif  * attenuation;
-
-    return diffuse;
-}
-#fi
 
 #if (SLIGHTS)
 vec3 calcSpotLight (vec3 VPos_viewspace, SLight light, vec3 normal, vec3 viewDir) {
@@ -186,6 +185,32 @@ vec3 calcSpotLight (vec3 VPos_viewspace, SLight light, vec3 normal, vec3 viewDir
     vec3 diffuse  = light.color * diffuseF  * coldif  * attenuation;
 
     return diffuse * intensity;
+}
+#fi
+//FUNCTIONS
+//**********************************************************************************************************************
+
+#if (PLIGHTS)
+// Calculates the point light color contribution
+vec3 calcPointLight (vec3 VPos_viewspace, PLight light, vec3 normal, vec3 viewDir) {
+
+    float distance = length(light.position - VPos_viewspace);
+  // AMT  if(light.distance > 0.0 && distance > light.distance) return vec3(0.0, 0.0, 0.0);
+
+    vec3 lightDir = normalize(light.position - VPos_viewspace);
+
+    // Difuse
+    float diffuseF = max(dot(lightDir, normal), 0.0f);
+
+    // Attenuation
+    //float attenuation = 1.0f / (1.0f + 0.01f * distance + 0.0001f * (distance * distance));
+    float attenuation = 1.0f;// AMT light.decay / (light.decay + 0.01f * distance + 0.0001f * (distance * distance));
+
+    // Combine results
+    // vec3 diffuse  = light.color * diffuseF  * material.diffuse  * attenuation;
+    vec3 diffuse  = light.color * diffuseF  * coldif  * attenuation;
+
+    return diffuse;
 }
 #fi
 
@@ -248,10 +273,10 @@ void main() {
         fragVPos = vec3(VPos_viewspace) / VPos_viewspace.w;
     #fi
 
-    #if (COLORS)
+    //#if (COLORS)
         // Pass vertex color to fragment shader
-        fragVColor = VColor;
-    #fi
+        fragVColor = vec4(coldif, 1.0);
+    //#fi
 
     #if (TEXTURE)
         // Pass uv coordinate to fragment shader
@@ -294,7 +319,7 @@ void main() {
 
         #for lightIdx in 0 to NUM_PLIGHTS
             pLight = calcPointLight(VPos_viewspace.xyz, pLights[##lightIdx], normal, viewDir);
-            combined.rgb += pLight;
+           // combined.rgb += pLight;
         #end
     #fi
     #if (SLIGHTS)
@@ -307,5 +332,14 @@ void main() {
         #end
     #fi
 
-    v_VColor = combined;
+   //  #if (!NORMAL_MAP && !NORMAL_FLAT)
+    #if (NORMAL_MAP && !NORMAL_FLAT)// ?? AMT TMP HACK for the FLATNOTMAL prop bug!!!!!
+        // Transform normal
+        #if (!INSTANCED)
+           fragVNorm = vec3(NMat * VNorm);
+        #fi
+        #if (INSTANCED)
+           fragVNorm = vec3(NMat * mat3(MMat) * VNorm);
+        #fi
+    #fi
  }
