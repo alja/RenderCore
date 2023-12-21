@@ -227,7 +227,7 @@ export class ZShape extends Mesh {
         //
         // vertices
         //
-        let nStep = 15;
+        let nStep = 36;
         let vBuff = new Float32Array((nStep * 2 + 2) * 3);
 
         // apex cone at the center
