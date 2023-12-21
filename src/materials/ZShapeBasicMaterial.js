@@ -24,7 +24,32 @@ export class ZShapeBasicMaterial extends CustomShaderMaterial {
         this.diffuse = args.diffuse ? args.diffuse : new Color(Math.random() * 0xffffff);
 
         this.side = args.side ? args.side : FRONT_AND_BACK_SIDE;
+	//	this._specular = new Color(Math.random() * 0xffffff);
+		this._specular = new Color(0.5 * 0xffffff);
+		this._shininess = 64;
     }
+
+	set specular(val) {
+		this._specular = val;
+
+		// Notify onChange subscriber
+		if (this._onChangeListener) {
+			var update = {uuid: this._uuid, changes: {specular: this._specular.getHex()}};
+			this._onChangeListener.materialUpdate(update)
+		}
+	}
+	set shininess(val) {
+		this._shininess = val;
+
+		// Notify onChange subscriber
+		if (this._onChangeListener) {
+			var update = {uuid: this._uuid, changes: {shininess: this._shininess}};
+			this._onChangeListener.materialUpdate(update)
+		}
+	}
+
+	get specular() { return this._specular; }
+	get shininess() { return this._shininess; }
 
     clone_for_picking() {
         let o = new ZShapeBasicMaterial( {
@@ -125,6 +150,14 @@ export class ZShapeBasicMaterial extends CustomShaderMaterial {
                 case "diffuse":
                     this._diffuse = data.diffuse;
                     delete data.diffuse;
+                    break;
+                case "specular":
+                    this._specular.setHex(data.specular);
+                    delete data.specular;
+                    break;
+                case "shininess":
+                    this._shininess = data.shininess;
+                    delete data.shininess;
                     break;
             }
         }
