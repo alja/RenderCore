@@ -57,11 +57,11 @@ fontImgLoader.load("../common/textures/fonts/dejavu-serif-italic.png", function 
     textScreen = new RC.ZText(
         {
             text: 
-            `To be, or not `, 
+            `llll`,
             fontTexture: fontTexture, 
-            xPos: 10, 
-            yPos: 150, 
-            fontSize: 80, 
+            xPos: 0.5,
+            yPos: 0.5,
+            fontSize: 0.05,
             cellAspect: 8/16, 
             mode: RC.ZTEXT_SPACE_SCREEN,
             fontHinting: 1.0,
