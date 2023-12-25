@@ -61,15 +61,14 @@ fontImgLoader.load("../common/textures/fonts/dejavu-serif-italic.png", function 
     textScreen = new RC.ZText(
         {
             text: 
-            `llll`,
+            `Abc_123+Xyz-890\n2\n3\n4\n5\n6\n7\n8\n9\n10`,
             fontTexture: fontTexture, 
-            xPos: 0.75,
-            yPos: 0.75,
+            xPos: 0.15,
+            yPos: 1.0,
             fontSize: 0.05,
-            cellAspect: 8/16, 
             mode: RC.ZTEXT_SPACE_SCREEN,
             fontHinting: 1.0,
-            color: new RC.Color(0.0,0.0,1.0),
+            color: new RC.Color(0.0, 0.0, 1.0),
             sdf_tex_width: fontTexture.image.width,
             sdf_tex_height: fontTexture.image.height,
             font: RC.dejavu_italic_font,
@@ -100,16 +99,15 @@ fontImgLoader.load("../common/textures/fonts/dejavu-serif-italic.png", function 
             xPos: 0, 
             yPos: 0, 
             fontSize: 0.01, 
-            cellAspect: 8/16, 
             mode: RC.ZTEXT_SPACE_WORLD,
             fontHinting: 1.0,
-            color: new RC.Color(1.0,0.0,0.0),
+            color: new RC.Color(1.0, 0.0, 0.0),
             sdf_tex_width: fontTexture.image.width,
             sdf_tex_height: fontTexture.image.height,
             font: RC.dejavu_italic_font
         }
     );
-    textWorld.position = new RC.Vector3(1, 4, 1);
+    textWorld.position = new RC.Vector3(-10, 4, 1);
     scene.add(textWorld);
 });
 

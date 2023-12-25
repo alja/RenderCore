@@ -1,7 +1,6 @@
 #version 300 es
 precision mediump float;
 
-
 #if (TEXTURE)
 struct Material {
     vec3 diffuse;
@@ -33,7 +32,6 @@ float sdf_alpha( float sdf, float horz_scale, float vert_scale, float vgrad ) {
     alpha = pow( alpha, 1.0 + 0.2 * vgrad * hint_amount );
     return alpha;
 }
-
 
 void main() {
 	#if (TEXTURE)
