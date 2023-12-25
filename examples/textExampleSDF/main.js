@@ -38,6 +38,10 @@ const fontImgLoader = new RC.ImageLoader();
 let textWorld;
 let textScreen;
 let speed = 0.3;
+const cube = new RC.Cube(10.0, new RC.Color().setColorName("grey"));
+cube.material = new RC.MeshLambertMaterial();
+scene.add(cube);
+
 
 fontImgLoader.load("../common/textures/fonts/dejavu-serif-italic.png", function (image) {
     const fontTexture = new RC.Texture(
@@ -59,8 +63,8 @@ fontImgLoader.load("../common/textures/fonts/dejavu-serif-italic.png", function 
             text: 
             `llll`,
             fontTexture: fontTexture, 
-            xPos: 0.5,
-            yPos: 0.5,
+            xPos: 0.75,
+            yPos: 0.75,
             fontSize: 0.05,
             cellAspect: 8/16, 
             mode: RC.ZTEXT_SPACE_SCREEN,
@@ -130,6 +134,7 @@ function mousedownFunction(event){
 }
 
 function mousemoveFunction(event){
+    return;
     if(!firstMouseDown)
     {
         const pixelRatio = window.devicePixelRatio || 1;
