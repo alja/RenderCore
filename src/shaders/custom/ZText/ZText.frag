@@ -6,19 +6,14 @@ struct Material {
     vec3 diffuse;
     sampler2D texture0; //FONT TEXTURE
 };
+
+uniform Material material;
+in vec2 fragUV;
 #fi
 
 // In SDF
 in float doffset;
-in vec2  sdf_texel;
-
-#if (TEXTURE)
-uniform Material material;
-#fi
-
-#if (TEXTURE)
-in vec2 fragUV;
-#fi
+flat in vec2 sdf_texel;
 
 out vec4 color;
 
@@ -35,7 +30,6 @@ float sdf_alpha( float sdf, float horz_scale, float vert_scale, float vgrad ) {
 
 void main() {
 	#if (TEXTURE)
-
     // Sampling the texture, L pattern
     float sdf       = texture(material.texture0, fragUV).r;
     float sdf_north = texture(material.texture0, fragUV + vec2( 0.0, sdf_texel.y ) ).r;
@@ -53,7 +47,6 @@ void main() {
     float alpha = sdf_alpha( sdf, horz_scale, vert_scale, vgrad );
 
     color = vec4( material.diffuse, alpha );
-
 
     //vec4 texel = texture(material.texture0, sdf);
     //color = vec4(texel.rgb * material.diffuse, texel.a);

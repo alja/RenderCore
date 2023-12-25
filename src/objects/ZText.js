@@ -26,8 +26,6 @@ export class ZText extends Mesh {
         this._fontHinting = 1.0;
         this._color = args.color !== undefined ? args.color : [0.0,0.0,0.0];
         this._font = args.font !== undefined ? args.font : roboto_font;
-        this._sdf_tex_width = args.sdf_tex_width !== undefined ? args.sdf_tex_width : 0;
-        this._sdf_tex_height = args.sdf_tex_height !== undefined ? args.sdf_tex_height : 0;
 
         this._finalOffsetX = 0;
         this._finalOffsetY = 0;
@@ -40,8 +38,6 @@ export class ZText extends Mesh {
             this.material = new ZTextMaterial("ZText", {}, {"scale": ZText._setupScaleScreenMode(args.text, font_metrics, args.font)});
             // Uniforms aspect and viewport set by MeshRenderer based on actual viewport
             this.material.setUniform("MODE", ZTEXT_SPACE_SCREEN);
-            this.material.setUniform("sdf_tex_width", this._sdf_tex_width);
-            this.material.setUniform("sdf_tex_height", this._sdf_tex_height);
             this.material.setUniform("sdf_border_size", this._font.iy);
             this.material.setUniform("hint_amount", this._fontHinting);
             this.material.setUniform("offset", [0,0]);
@@ -58,8 +54,6 @@ export class ZText extends Mesh {
                  offset: new Vector2(this._xPos, this._yPos),
                  mode: this._mode,
                  fontHinting: this._fontHinting,
-                 sdf_tex_width: this._sdf_tex_width,
-                 sdf_tex_height: this._sdf_tex_height,
                  sdf_border_size: this._font.iy});
             this.material.color = args.color;
             this.material.addMap(this._fontTexture);
@@ -294,8 +288,6 @@ export class ZText extends Mesh {
         let font_metrics = ZText._fontMetrics( args.font, args.fontSize*8, args.fontSize*8 * 0.2 );
         const material = new ZTextMaterial("ZText", {}, {"scale": this._setupScale(args.text, font_metrics, args.font)});
         material.setUniform("MODE", args.mode);
-        material.setUniform("sdf_tex_width", args.sdf_tex_width);
-        material.setUniform("sdf_tex_height", args.sdf_tex_height);
         material.setUniform("sdf_border_size", args.sdf_border_size);
         material.setUniform("hint_amount", args.fontHinting);
         material.setUniform("offset", [0,0]);
