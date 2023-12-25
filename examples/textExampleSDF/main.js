@@ -91,11 +91,11 @@ fontImgLoader.load("../common/textures/fonts/dejavu-serif-italic.png", function 
 
     textWorld = new RC.ZText(
         {
-            text: `To be, or not `, 
+            text: `Space___World`, 
             fontTexture: fontTexture, 
             xPos: 0, 
             yPos: 0, 
-            fontSize: 80, 
+            fontSize: 0.01, 
             cellAspect: 8/16, 
             mode: RC.ZTEXT_SPACE_WORLD,
             fontHinting: 1.0,
