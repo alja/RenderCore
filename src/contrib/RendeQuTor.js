@@ -14,7 +14,7 @@ export class RendeQuTor
         this.ovlscene = overlay_scene;
         this.queue    = new RenderQueue(renderer);
         this.pqueue   = new RenderQueue(renderer);
-        this.overlaypqueue   = new RenderQueue(renderer);
+        this.ovlpqueue= new RenderQueue(renderer);
         this.vp_w = 0;
         this.vp_h = 0;
         this.pick_radius = 32;
@@ -276,11 +276,11 @@ export class RendeQuTor
         this.camera.postPickRestoreTBLR();
     }
 
-    pick(x, y, detect_depth = false)
+    pick_low_level(rnr_queue, x, y, detect_depth)
     {
         this.renderer.pick_setup(this.pick_center, this.pick_center);
 
-        let state = this.pqueue.render();
+        let state = rnr_queue.render();
         state.x = x;
         state.y = y;
         state.depth = -1.0;
@@ -293,7 +293,7 @@ export class RendeQuTor
             let gl  = rdr.gl;
             let fbm = rdr.glManager._fboManager;
 
-            fbm.bindFramebuffer(this.pqueue._renderTarget);
+            fbm.bindFramebuffer(rnr_queue._renderTarget);
 
             // Type RED is not supported on Firefox, specs require RGBA so we
             // read that, 3 x 3 pixels x 4 channels.
@@ -316,74 +316,39 @@ export class RendeQuTor
         return state;
     }
 
+    pick(x, y, detect_depth = false)
+    {
+        return this.pick_low_level(this.pqueue, x, y, detect_depth);
+    }
+
     pick_overlay(x, y, detect_depth = false)
     {
-        this.renderer.pick_setup(this.pick_center, this.pick_center);
+        return this.pick_low_level(this.ovlpqueue, x, y, detect_depth);
+    }
 
-        let state = this.overlaypqueue.render();
-        state.x = x;
-        state.y = y;
-        state.depth = -1.0;
-        state.object = this.renderer.pickedObject3D;
-        console.log("RenderQuTor::pick_overlay", state);
+    pick_instance_low_level(rnr_queue, state)
+    {
+        if (state.object !== this.renderer.pickedObject3D) {
+            console.error("RendeQuTor::pick_instance state mismatch", state, this.renderer.pickedObject3D);
+        } else {
+            // console.log("RenderQuTor::pick_instance going for secondary select");
 
-        if (detect_depth && this.renderer.pickedObject3D !== null)
-        {
-            let rdr = this.renderer;
-            let gl  = rdr.gl;
-            let fbm = rdr.glManager._fboManager;
+            this.renderer._pickSecondaryEnabled = true;
+            rnr_queue.render();
 
-            fbm.bindFramebuffer(this.overlaypqueue._renderTarget);
-
-            // Type RED is not supported on Firefox, specs require RGBA so we
-            // read that, 3 x 3 pixels x 4 channels.
-            let d = new Float32Array(9*4);
-            gl.readBuffer(gl.COLOR_ATTACHMENT0);
-            gl.readPixels(this.pick_center - 1, this.pick_center - 1, 3, 3, gl.RGBA, gl.FLOAT, d);
-
-            fbm.unbindFramebuffer();
-
-            let near = this.camera.near;
-            let far  = this.camera.far;
-            for (let i = 0; i < 9; ++i) {
-                // NOTE: we are reducing into first 3 x 3 elements, dropping GBA channels.
-                d[i] = (near * far) / ((near - far) * d[4*i] + far);
-            }
-            state.depth = d[4];
-            // console.log("    pick depth at", x, ",", y, ":", d);
+            state.instance = this.renderer._pickedID;
         }
-
         return state;
     }
 
     pick_instance(state)
     {
-        if (state.object !== this.renderer.pickedObject3D) {
-            console.error("RendeQuTor::pick_instance state mismatch", state, this.renderer.pickedObject3D);
-        } else {
-            // console.log("RenderQuTor::pick_instance going for secondary select");
-
-            this.renderer._pickSecondaryEnabled = true;
-            this.pqueue.render();
-
-            state.instance = this.renderer._pickedID;
-        }
-        return state;
+        return pick_instance_low_level(this.pqueue, state);
     }
 
-    pick_instance_overlay(state) // Do I need this ??? @Waad
+    pick_instance_overlay(state)
     {
-        if (state.object !== this.renderer.pickedObject3D) {
-            console.error("RendeQuTor::pick_instance state mismatch", state, this.renderer.pickedObject3D);
-        } else {
-            // console.log("RenderQuTor::pick_instance going for secondary select");
-
-            this.renderer._pickSecondaryEnabled = true;
-            this.overlaypqueue.render();
-
-            state.instance = this.renderer._pickedID;
-        }
-        return state;
+        return pick_instance_low_level(this.ovlpqueue, state);
     }
 
 
@@ -436,6 +401,8 @@ export class RendeQuTor
         this.pqueue.pushRenderPass(this.PRP_depth2r);
     }
 
+    // XXXX-MT Probably do not need the next two, could use the above two -- investigate.
+
     make_PRP_overlay()
     {
         let pthis = this;
@@ -454,7 +421,7 @@ export class RendeQuTor
                 clearColorArray:  new Uint32Array([0xffffffff, 0, 0, 0])} ]
         );
 
-        this.overlaypqueue.pushRenderPass(this.PRP_overlay);
+        this.ovlpqueue.pushRenderPass(this.PRP_overlay);
     }
 
     make_PRP_depth2r_overlay()
@@ -477,7 +444,7 @@ export class RendeQuTor
                 clearColorArray: new Float32Array([1, 0, 0, 0]) } ]
         );
 
-        this.overlaypqueue.pushRenderPass(this.PRP_depth2r_overlay);
+        this.ovlpqueue.pushRenderPass(this.PRP_depth2r_overlay);
     }
 
 
@@ -804,7 +771,7 @@ export class RendeQuTor
                 {id: "color_final", textureConfig: RenderPass.DEFAULT_RGBA16F_TEXTURE_CONFIG}
             ]
         );
-        this.RP_Blend.intex_outline_blurred = "gauss_hv"; // or overlay
+        this.RP_Blend.intex_outline_blurred = "gauss_hv"; // also used for blending of overlay
         this.RP_Blend.intex_main = "color_main";
         this.RP_Blend.view_setup = function (vport) { this.viewport = vport; };
 
