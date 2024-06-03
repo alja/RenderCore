@@ -1,11 +1,9 @@
 import {Mesh} from "./Mesh.js";
 import {Geometry} from "./Geometry.js";
 import {Float32Attribute, Uint32Attribute} from "../core/BufferAttribute.js";
-import {Vector2} from "../math/Vector2.js";
-import {Vector3} from "../math/Vector3.js";
+import {Texture} from "../textures/Texture.js";
 import {ZTextMaterial } from "../materials/ZTextMaterial.js";
 import {ZTEXT_SPACE_SCREEN, ZTEXT_SPACE_WORLD } from "../constants.js";
-import {roboto_font} from "../../examples/common/textures/fonts/roboto.js"
 
 //ZText API
 export class ZText extends Mesh {
@@ -13,61 +11,44 @@ export class ZText extends Mesh {
         super();
         this.type = "ZText";
         this.frustumCulled = false;
-        this.pickable = true;
-        this.screenW = args.screenW !== undefined ? args.screenW : 1425;
-        this.screenH = args.screenH !== undefined ? args.screenH : 822;
-        this.screenD = Math.sqrt(Math.pow(this.screenW, 2) + Math.pow(this.screenH, 2));
 
-        this._text = args.text !== undefined ? args.text : "New text";
         this._fontTexture = args.fontTexture !== undefined ? args.fontTexture : null;
-        this._xPos = args.xPos !== undefined ? (args.xPos*this.screenW) : 0;
-        this._yPos = args.yPos !== undefined ? (args.yPos*this.screenH) : 0;
+        this._xPos = args.xPos !== undefined ? (args.xPos) : 1.0;
+        this._yPos = args.yPos !== undefined ? (args.yPos) : 0;
         this._mode = args.mode !== undefined ? args.mode : ZTEXT_SPACE_SCREEN;
         this._fontHinting = 1.0;
         this._color = args.color !== undefined ? args.color : [0.0,0.0,0.0];
-        this._font = args.font !== undefined ? args.font : roboto_font;
+        this._font = args.font !== undefined ? args.font : null;
 
         this._finalOffsetX = 0;
         this._finalOffsetY = 0;
 
-        //TODO refactor this
-        if (this._mode === ZTEXT_SPACE_SCREEN) {
-            this._fontSize = args.fontSize !== undefined ? (args.fontSize*this.screenD) : 40;
-            let font_metrics = ZText._fontMetrics( this._font, this._fontSize, this._fontSize * 0.2 );
-            this.geometry = this.setText2D(this._text, this._xPos, this._yPos, font_metrics, this._font);
-            this.material = new ZTextMaterial("ZText", {}, {"scale": ZText._setupScaleScreenMode(args.text, font_metrics, args.font)});
-            // Uniforms aspect and viewport set by MeshRenderer based on actual viewport
-            this.material.setUniform("MODE", ZTEXT_SPACE_SCREEN);
-            this.material.setUniform("sdf_border_size", this._font.iy);
-            this.material.setUniform("hint_amount", this._fontHinting);
-            this.material.setUniform("offset", [0,0]);
-            this.material.setUniform("FinalOffset", [0,0]);
+        this._fontSize = args.fontSize !== undefined ? args.fontSize : 1;
 
-            this.material.color = args.color;
+        if (this._mode !== ZTEXT_SPACE_SCREEN && this._mode !== ZTEXT_SPACE_WORLD)
+            console.error('[' + this.type + "]: Unknow mode [" + this._mode + ']');
 
-            this.material.addMap(this._fontTexture);
-        } else if (this._mode === ZTEXT_SPACE_WORLD) {
-            this._fontSize = args.fontSize !== undefined ? (args.fontSize*this.screenD) : 40;
-            this.geometry = ZText._assembleGeometry({text: this._text, fontSize: this._fontSize, font: this._font});
-            this.material = ZText._assembleMaterial(
-                {text: this._text, fontSize: this._fontSize, font: this._font,
-                 offset: new Vector2(this._xPos, this._yPos),
-                 mode: this._mode,
-                 fontHinting: this._fontHinting,
-                 sdf_border_size: this._font.iy});
-            this.material.color = args.color;
-            this.material.addMap(this._fontTexture);
-        } else {
-            console.error('[' + this.type + "]: Unknow mode [" + args.mode + ']');
-        }
+        this.material = new ZTextMaterial();
+        // Uniforms aspect and viewport set by MeshRenderer based on actual viewport
+        this.material.setUniform("MODE", this._mode);
+        this.material.setUniform("hint_amount", this._fontHinting);
+        this.material.setUniform("offset", [this._xPos, this._yPos]);
+        this.material.setUniform("FinalOffset", [0,0]);
 
+        this.material.color = args.color;
         this.material.transparent = true;
+        this.material.addMap(this._fontTexture);
+
+        this.text = args.text !== undefined ? args.text : "Default text";
     }
 
     set text(text) {
         this._text = text;
-        let font_metrics = ZText._fontMetrics( this._font, this._fontSize, this._fontSize * 0.2 );
-        this.geometry = this.setText2D(this._text, this._xPos, this._yPos, font_metrics, this._font);
+        let font_metrics = ZText._fontMetrics( this._font, this._fontSize, this._fontSize * 0 );
+        this.geometry = this.setText2D(this._text, 0, 0, font_metrics, this._font);
+        this.material.setUniform("scale", font_metrics.cap_scale);
+        this.material.setUniform("sdf_oo_N_pix_in_char", this._font.iy / this._font.cap_height);
+        this.material.setUniform("sdf_text_size", this._fontSize);
     }
     get text() {
         return this._text;
@@ -95,8 +76,7 @@ export class ZText extends Mesh {
     set fontSize(fontSize) {
         this._fontSize = fontSize;
         let font_metrics = ZText._fontMetrics( this._font, this._fontSize, this._fontSize * 0.2 );
-        this.geometry = this.setText2D(this._text, this._xPos, this._yPos, font_metrics, this._font);
-        this.material.setAttribute("scale", ZText._setupScaleScreenMode(this._text, font_metrics, this._font));
+        this.geometry = this.setText2D(this._text, 0, 0, font_metrics, this._font);
     }
     get fontSize() {
         return this._fontSize;
@@ -112,6 +92,7 @@ export class ZText extends Mesh {
         this.material.setUniform("FinalOffset", [this._finalOffsetX, this._finalOffsetY]);
     }
 
+/*
     static _assembleGeometry(args) {
         const geometry = new Geometry();
         let font_metrics = ZText._fontMetrics( args.font, args.fontSize, args.fontSize * 0.2 );
@@ -140,7 +121,7 @@ export class ZText extends Mesh {
             }
 
             if ( schar == " " ) {
-                cpos[0] += font.space_advance * scale;
+                cpos[0] += font.space_advance * font_metrics.cap_scale;
                 prev_char = " ";
                 continue;
             }
@@ -164,8 +145,8 @@ export class ZText extends Mesh {
             let bottom = baseline - scale * ( font.descent + font.iy );
             let top    = bottom   + scale * ( font.row_height );
             let left   = cpos[0]   + font.aspect * scale * ( font_char.bearing_x + kern -  font.ix );
-
             let right  = left     + font.aspect * scale * ( g[2] - g[0] );
+
             let p = [ left, top, right, bottom ];
 
             textVertices[c*4*2 + 0] = p[0];
@@ -294,6 +275,7 @@ export class ZText extends Mesh {
         material.setUniform("FinalOffset", [0,0]);
         return material;
     }
+*/
 
     setText2D(text, x, y, font_metrics, font) {
         const vertices_positions = new Array();
@@ -303,7 +285,6 @@ export class ZText extends Mesh {
         let pos = [x,y];
         let cpos  = pos;  // Current pen position
         let x_max = 0.0;  // Max width - used for bounding box
-        let scale = font_metrics.cap_scale;
 
         for(let c = 0; c < text.length; c++) {
             const schar = text.charAt(c);
@@ -317,7 +298,7 @@ export class ZText extends Mesh {
             }
 
             if ( schar == " " ) {
-                cpos[0] += font.space_advance * scale;
+                cpos[0] += font.space_advance * font_metrics.cap_scale;
                 prev_char = " ";
                 continue;
             }
@@ -325,31 +306,33 @@ export class ZText extends Mesh {
             // Laying out the glyph rectangle
             let font_char = font.chars[schar];
             if ( !font_char ) { // Substituting unavailable characters with '?'
+                schar = "?";
                 font_char = font.chars[ "?" ];
             }
 
             let kern = font.kern[ prev_char + schar ];
             if ( !kern ) kern = 0.0;
 
-            let baseline = cpos[1] - font_metrics.ascent;
             let lowcase = ( font.chars[schar].flags & 1 ) == 1;
             // Low case chars use their own scale
             let scale = lowcase ? font_metrics.low_scale : font_metrics.cap_scale;
+            let baseline = cpos[1] - font_metrics.ascent;
 
             let g      = font_char.rect;
-
             let bottom = baseline - scale * ( font.descent + font.iy );
             let top    = bottom   + scale * ( font.row_height);
             let left   = cpos[0]  + font.aspect * scale * ( font_char.bearing_x + kern - font.ix );
             let right  = left     + font.aspect * scale * ( g[2] - g[0] );
 
+            console.log(schar, scale, top, bottom, left, right);
+
             // POSITIONs
-            vertices_positions.push(left/this.screenW, top/this.screenH);
-            vertices_positions.push(left/this.screenW, bottom/this.screenH);
-            vertices_positions.push(right/this.screenW, top/this.screenH);
-            vertices_positions.push(right/this.screenW, top/this.screenH);
-            vertices_positions.push(left/this.screenW, bottom/this.screenH);
-            vertices_positions.push(right/this.screenW, bottom/this.screenH);
+            vertices_positions.push(left, top);
+            vertices_positions.push(left, bottom);
+            vertices_positions.push(right, top);
+            vertices_positions.push(right, top);
+            vertices_positions.push(left, bottom);
+            vertices_positions.push(right, bottom);
 
             // UVs
             vertices_uvs.push(g[0], 1 - g[1]);
@@ -358,6 +341,8 @@ export class ZText extends Mesh {
             vertices_uvs.push(g[2], 1 - g[1]);
             vertices_uvs.push(g[0], 1 - g[3]);
             vertices_uvs.push(g[2], 1 - g[3]);
+
+            // If per vertex scale, also push scale to appropriate vertex array.
 
             // Advancing pen position
             let new_pos_x = cpos[0] + font.aspect * scale * ( font_char.advance_x );
@@ -373,6 +358,24 @@ export class ZText extends Mesh {
     }
 
     static _fontMetrics(font, pixel_size, more_line_gap = 0.0) {
+        let cap_scale = pixel_size / font.cap_height;
+        let low_scale = cap_scale;
+
+        let ascent      = font.ascent * cap_scale;
+        let line_height = cap_scale * ( font.ascent + font.descent + font.line_gap ) + more_line_gap;
+
+        return { cap_scale   : cap_scale,
+                 low_scale   : low_scale,
+                 pixel_size  : pixel_size,
+                 ascent      : ascent,
+                 line_height : line_height
+               };
+    }
+
+    // Original version for pixel aligned rendering, requires additional vertex array for per vertex scale.
+    // The code has also been changed in the vertex shader.
+
+    static _fontMetricsPixels(font, pixel_size, more_line_gap = 0.0) {
         // We use separate scale for the low case characters
         // so that x-height fits the pixel grid.
         // Other characters use cap-height to fit to the pixels
@@ -390,5 +393,20 @@ export class ZText extends Mesh {
                  ascent      : ascent,
                  line_height : line_height
                };
+    }
+
+    static createDefaultTexture(image) {
+        return new Texture(
+            image,
+            Texture.WRAPPING.ClampToEdgeWrapping,
+            Texture.WRAPPING.ClampToEdgeWrapping,
+            Texture.FILTER.LinearFilter,
+            Texture.FILTER.LinearFilter,
+            Texture.FORMAT.LUMINANCE,
+            Texture.FORMAT.LUMINANCE,
+            Texture.TYPE.UNSIGNED_BYTE,
+            image.width,
+            image.height
+        );
     }
 }

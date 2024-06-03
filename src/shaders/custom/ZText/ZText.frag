@@ -45,6 +45,8 @@ void main() {
     float vert_scale  = 0.6;
 
     float alpha = sdf_alpha( sdf, horz_scale, vert_scale, vgrad );
+    if (alpha < 0.05)
+        discard;
 
     color = vec4( material.diffuse, alpha );
 
