@@ -2,8 +2,8 @@ import {Mesh} from "./Mesh.js";
 import {Geometry} from "./Geometry.js";
 import {Float32Attribute, Uint32Attribute} from "../core/BufferAttribute.js";
 import {Texture} from "../textures/Texture.js";
-import {ZTextMaterial } from "../materials/ZTextMaterial.js";
-import {ZTEXT_SPACE_SCREEN, ZTEXT_SPACE_WORLD } from "../constants.js";
+import {ZTextMaterial} from "../materials/ZTextMaterial.js";
+import {TEXT2D_SPACE_SCREEN, TEXT2D_SPACE_WORLD} from "../constants.js";
 
 //ZText API
 export class ZText extends Mesh {
@@ -15,7 +15,7 @@ export class ZText extends Mesh {
         this._fontTexture = args.fontTexture !== undefined ? args.fontTexture : null;
         this._xPos = args.xPos !== undefined ? (args.xPos) : 1.0;
         this._yPos = args.yPos !== undefined ? (args.yPos) : 0;
-        this._mode = args.mode !== undefined ? args.mode : ZTEXT_SPACE_SCREEN;
+        this._mode = args.mode !== undefined ? args.mode : TEXT2D_SPACE_SCREEN;
         this._fontHinting = 1.0;
         this._color = args.color !== undefined ? args.color : [0.0,0.0,0.0];
         this._font = args.font !== undefined ? args.font : null;
@@ -25,7 +25,7 @@ export class ZText extends Mesh {
 
         this._fontSize = args.fontSize !== undefined ? args.fontSize : 1;
 
-        if (this._mode !== ZTEXT_SPACE_SCREEN && this._mode !== ZTEXT_SPACE_WORLD)
+        if (this._mode !== TEXT2D_SPACE_SCREEN && this._mode !== TEXT2D_SPACE_WORLD)
             console.error('[' + this.type + "]: Unknow mode [" + this._mode + ']');
 
         this.material = new ZTextMaterial();
@@ -91,191 +91,6 @@ export class ZText extends Mesh {
         this._finalOffsetY = this._finalOffsetY + y;
         this.material.setUniform("FinalOffset", [this._finalOffsetX, this._finalOffsetY]);
     }
-
-/*
-    static _assembleGeometry(args) {
-        const geometry = new Geometry();
-        let font_metrics = ZText._fontMetrics( args.font, args.fontSize, args.fontSize * 0.2 );
-        geometry.vertices = ZText._setupVertices(args.text, font_metrics, args.font);
-        geometry.indices = ZText._setupIndices(args.text, args.fontSize);
-        geometry.uv = ZText._setupUVs(args.text, args.font);
-        return geometry;
-    }
-
-    static _setupVertices(text, font_metrics, font) {
-        const textVertices = new Array(text.length * 4 * 2);
-        let prev_char = " ";  // Used to calculate kerning
-        const pos = [0,0];
-        let cpos  = pos;  // Current pen position
-        let x_max = 0.0;  // Max width - used for bounding box
-
-        for (let c = 0; c < text.length; c++) {
-            let schar = text.charAt(c);
-
-            if ( schar == "\n" ) {
-                if ( cpos[0] > x_max ) x_max = cpos[0]; // Expanding the bounding rect
-                cpos[0]  = pos[0] ;
-                cpos[1] -= font_metrics.line_height;
-                prev_char = " ";
-                continue;
-            }
-
-            if ( schar == " " ) {
-                cpos[0] += font.space_advance * font_metrics.cap_scale;
-                prev_char = " ";
-                continue;
-            }
-
-            // Laying out the glyph rectangle
-            let font_char = font.chars[schar];
-            if ( !font_char ) { // Substituting unavailable characters with '?'
-                schar = "?";
-                font_char = font.chars[ "?" ];
-            }
-
-            let kern = font.kern[ prev_char + schar ];
-            if ( !kern ) kern = 0.0;
-
-            let baseline = cpos[1] - font_metrics.ascent;
-            let lowcase = ( font.chars[schar].flags & 1 ) == 1;
-            // Low case chars use their own scale
-            let scale = lowcase ? font_metrics.low_scale : font_metrics.cap_scale;
-
-            let g      = font_char.rect;
-            let bottom = baseline - scale * ( font.descent + font.iy );
-            let top    = bottom   + scale * ( font.row_height );
-            let left   = cpos[0]   + font.aspect * scale * ( font_char.bearing_x + kern -  font.ix );
-            let right  = left     + font.aspect * scale * ( g[2] - g[0] );
-
-            let p = [ left, top, right, bottom ];
-
-            textVertices[c*4*2 + 0] = p[0];
-            textVertices[c*4*2 + 1] = p[1];
-
-            textVertices[c*4*2 + 2] = p[0];
-            textVertices[c*4*2 + 3] = p[3];
-
-            textVertices[c*4*2 + 4] = p[2];
-            textVertices[c*4*2 + 5] = p[1];
-
-            textVertices[c*4*2 + 6] = p[2];
-            textVertices[c*4*2 + 7] = p[3];
-
-            // Advancing pen position
-            let new_pos_x = cpos[0] + font.aspect * scale * ( font_char.advance_x  );
-            cpos = [ new_pos_x, cpos[1] ];
-            prev_char = schar;
-        }
-        return new Float32Attribute(textVertices, 2);
-    }
-
-    static _setupIndices(text) {
-        const textIndices = new Array(text.length * 6);
-
-        for (let c = 0; c < text.length; c++) {
-            textIndices[c*6 + 0] = 2*(c*2 + 0) + 0;
-            textIndices[c*6 + 1] = 2*(c*2 + 0) + 1;
-            textIndices[c*6 + 2] = 2*(c*2 + 1) + 0;
-
-            textIndices[c*6 + 3] = 2*(c*2 + 1) + 0;
-            textIndices[c*6 + 4] = 2*(c*2 + 0) + 1;
-            textIndices[c*6 + 5] = 2*(c*2 + 1) + 1;
-        }
-        return new Uint32Attribute(textIndices, 1);
-    }
-
-    static _setupUVs(text, font) {
-        const textUVs = new Array(text.length * 4 * 2);
-
-        for (let c = 0; c < text.length; c++) {
-            const schar = text.charAt(c);
-            if ( schar == "\n" || schar == " " )
-                continue;
-            let font_char = font.chars[schar];
-            if ( !font_char ) { // Substituting unavailable characters with '?'
-                font_char = font.chars[ "?" ];
-            }
-
-            let g = font_char.rect;
-
-            textUVs[c*4*2 + 0] = g[0];
-            textUVs[c*4*2 + 1] = 1- g[1];
-
-            textUVs[c*4*2 + 2] = g[0];
-            textUVs[c*4*2 + 3] = 1- g[3];
-
-            textUVs[c*4*2 + 4] = g[2];
-            textUVs[c*4*2 + 5] = 1- g[1];
-
-            textUVs[c*4*2 + 6] = g[2];
-            textUVs[c*4*2 + 7] = 1- g[3];
-        }
-        return new Float32Attribute(textUVs, 2);
-    }
-
-    static _setupScale(text, font_metrics, font) {
-        const textScale = new Array(text.length * 4);
-
-        for (let c = 0; c < text.length; c++) {
-            const schar = text.charAt(c);
-            if ( schar == "\n" || schar == " " )
-                continue;
-            let font_char = font.chars[schar];
-            if ( !font_char ) { // Substituting unavailable characters with '?'
-                font_char = font.chars[ "?" ];
-            }
-
-            // Low case chars use their own scale
-            let lowcase = ( font_char.flags & 1 ) == 1;
-            let scale = lowcase ? font_metrics.low_scale : font_metrics.cap_scale;
-
-            textScale[c*4 + 0] = scale;
-            textScale[c*4 + 1] = scale;
-            textScale[c*4 + 2] = scale;
-            textScale[c*4 + 3] = scale;
-        }
-        return new Float32Attribute(textScale, 1);
-    }
-
-    static _setupScaleScreenMode(text, font_metrics, font) {
-        const textScale = new Array();
-
-        for (let c = 0; c < text.length; c++) {
-            const schar = text.charAt(c);
-
-            if ( schar == "\n" || schar == " " )
-                continue;
-            let font_char = font.chars[schar];
-            if ( !font_char ) { // Substituting unavailable characters with '?'
-                font_char = font.chars[ "?" ];
-            }
-
-            // Low case chars use their own scale
-            let lowcase = ( font_char.flags & 1 ) == 1;
-
-            let scale = lowcase ? font_metrics.low_scale : font_metrics.cap_scale;
-
-            textScale.push(scale);
-            textScale.push(scale);
-            textScale.push(scale);
-            textScale.push(scale);
-            textScale.push(scale);
-            textScale.push(scale);
-        }
-        return new Float32Attribute(textScale, 1);
-    }
-
-    static _assembleMaterial(args) {
-        let font_metrics = ZText._fontMetrics( args.font, args.fontSize*8, args.fontSize*8 * 0.2 );
-        const material = new ZTextMaterial("ZText", {}, {"scale": this._setupScale(args.text, font_metrics, args.font)});
-        material.setUniform("MODE", args.mode);
-        material.setUniform("sdf_border_size", args.sdf_border_size);
-        material.setUniform("hint_amount", args.fontHinting);
-        material.setUniform("offset", [0,0]);
-        material.setUniform("FinalOffset", [0,0]);
-        return material;
-    }
-*/
 
     setText2D(text, x, y, font_metrics, font) {
         const vertices_positions = new Array();
