@@ -205,7 +205,13 @@ export class MeshRenderer extends Renderer {
 		this._pickedID = (r[0] != 0xFFFFFFFF) ? r[0] : null;
 
 		if (this._pickObject3D) {
-			this._pickedObject3D = (this._pickedID !== null) ? this._pickLUA[this._pickedID] : null;
+			if (this._pickedID !== null && this._pickedID < this._pickLUA.length) {
+				this._pickedObject3D = this._pickLUA[this._pickedID];
+			} else {
+				if (this._pickedID !== null && this._pickedID >= this._pickLUA.length)
+					console.error("Picked it out of bounds of look-up-table", this._pickedID, this._pickLUA.length);
+				this._pickedObject3D = null;
+			}
 			delete this._pickLUA;
 			if (this._pickCallback) this._pickCallback(this._pickedObject3D);
 		} else {
