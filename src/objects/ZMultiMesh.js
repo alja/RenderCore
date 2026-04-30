@@ -25,7 +25,7 @@ export class ZMultiMesh extends Mesh {
         let us = glManager._currentProgram.uniformSetter;
 
         let us_imat  = us["u_IMat"];
-        console.log("ZMultiMesh IMat uniform setter ", us["u_IMat"]);
+        // console.log("ZMultiMesh IMat uniform setter ", us["u_IMat"]);
         if (typeof us_imat === 'undefined') {
             console.log("zmultmesh IMat undefined");
             return;

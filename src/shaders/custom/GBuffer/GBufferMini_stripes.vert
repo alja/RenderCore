@@ -37,6 +37,11 @@ in vec2 deltaOffset;
     out vec3 v_ViewDirection_viewspace;
 #fi
 
+#if (PICK_MODE_UINT)
+    uniform bool u_PickInstance;
+    flat out uint vPrimitiveID;
+#fi
+
 //MAIN
 //**********************************************************************************************************************//
 void main() {
@@ -252,6 +257,12 @@ void main() {
             vec4 POS = u_PMatInv * vec4(deltaVPos_NDC * curr_clipspace.w, curr_clipspace.w);
             v_position_viewspace = POS.xyz;
             v_ViewDirection_viewspace = normalize(-POS.xyz);
+        #else
+            if (u_PickInstance) {
+                vPrimitiveID = uint(gl_VertexID / 4);
+            } else {
+                vPrimitiveID = 0u;
+            }
         #fi
         ///////////////////////////////////////////////////////////////////////////////////////////////////
         // //SCREENSPACE DEFAULT

@@ -11,6 +11,8 @@ precision mediump float;
 #if (PICK_MODE_UINT)
     uniform uint u_UINT_ID;
     layout(location = 0) out uint objectID;
+    uniform bool u_PickInstance;
+    flat in uint vPrimitiveID;
 #else
     in vec3 v_position_viewspace;
     vec3 v_normal_viewspace = vec3(0.0, 0.0, 1.0);
@@ -36,7 +38,11 @@ precision mediump float;
 //**********************************************************************************************************************
 void main() {
 #if (PICK_MODE_UINT)
-    objectID = u_UINT_ID;
+    if (u_PickInstance) {
+        objectID = vPrimitiveID;
+    } else {
+        objectID = u_UINT_ID;
+    }
 #else
     vn_viewspace = vec4(v_normal_viewspace, 1.0);
     vd_viewspace = vec4(v_ViewDirection_viewspace, 1.0);
