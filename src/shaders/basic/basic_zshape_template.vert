@@ -29,47 +29,6 @@ struct Material {
 };
 #fi
 
-//STRUCT
-//**********************************************************************************************************************
-#if (DLIGHTS)
-struct DLight {
-    vec3 direction;
-    vec3 color;
-};
-#fi
-#if (PLIGHTS)
-struct PLight {
-    //bool directional;
-    vec3 position;
-    vec3 position_worldspace;
-    vec3 color;
-    float distance;
-    //float decay;
-
-    mat4 VPMat;
-    bool castShadows;
-    bool hardShadows;
-    float minBias;
-    float maxBias;
-    float shadowFar;
-
-    float constant;
-    float linear;
-    float quadratic;
-};
-#fi
-#if (SLIGHTS)
-struct SLight {
-    vec3 position;
-    vec3 color;
-    float distance;
-    float decay;
-    float cutoff;
-    float outerCutoff;
-    vec3 direction;
-};
-#fi
-
 //UIO
 //**********************************************************************************************************************
 uniform mat4 MVMat; // Model View Matrix
@@ -81,21 +40,17 @@ in vec3 VPos;       // Vertex position
 in vec3 VNorm;      // Vertex normal
 uniform mat3 NMat;  // Normal Matrix
 
-#if (COLORS)
-    in vec4 VColor;
+out vec4 fragVColor;
+
+out vec3 fragVPos;
+
+#if (!NORMAL_FLAT)
+    out vec3 fragVNorm;
 #fi
-out vec4 fragVColor; // AMT take it outfrom COLORS define
 
 #if (TEXTURE)
     in vec2 uv;
     out vec2 fragUV;
-#fi
-
-#if (PLIGHTS)
-    out vec3 fragVPos;
-#fi
-#if (!NORMAL_MAP && !NORMAL_FLAT)
-out vec3 fragVNorm;
 #fi
 
 #if (POINTS)
@@ -123,102 +78,14 @@ out vec3 v_normal_viewspace;
 out vec3 v_ViewDirection_viewspace;
 #fi
 
-// AMT
-#if (DLIGHTS)
-uniform DLight dLights[##NUM_DLIGHTS];
-#fi
-#if (PLIGHTS)
-uniform PLight pLights[##NUM_PLIGHTS];
-#fi
-#if (SLIGHTS)
-uniform SLight sLights[##NUM_SLIGHTS];
-#fi
-
-
-uniform vec3 ambient;
-vec3 coldif;
-
-//FUNCTIONS
-//**********************************************************************************************************************
-#if (DLIGHTS)
-vec3 calcDirectLight (DLight light, vec3 normal, vec3 viewDir) {
-
-    vec3 lightDir = normalize(-light.direction);
-
-    // Difuse
-    float diffuseF = max(dot(normal, lightDir), 0.0f);
-
-    // Combine results
-    vec3 diffuse  = light.color * diffuseF * coldif;
-
-    return diffuse;
-}
-#fi
-
-
-#if (SLIGHTS)
-vec3 calcSpotLight (vec3 VPos_viewspace, SLight light, vec3 normal, vec3 viewDir) {
-
-    float distance = length(light.position - VPos_viewspace);
-   // AMT if(light.distance > 0.0 && distance > light.distance) return vec3(0.0, 0.0, 0.0);
-
-    vec3 lightDir = normalize(light.position - VPos_viewspace);
-
-
-    // spot
-    float theta = dot(lightDir, normalize(-light.direction));
-    float epsilon = light.cutoff - light.outerCutoff;
-    float intensity = clamp((theta - light.outerCutoff) / epsilon, 0.0, 1.0);
-    //if(theta <= light.cutoff) return vec3(0.0, 0.0, 0.0);
-    if(theta <= light.outerCutoff) return vec3(0.0, 0.0, 0.0);
-
-
-    // Difuse
-    float diffuseF = max(dot(lightDir, normal), 0.0f);
-
-    // Attenuation
-    //float attenuation = 1.0f / (1.0f + 0.01f * distance + 0.0001f * (distance * distance));
-    float attenuation = 1.0f; // light.decay / (light.decay + 0.01f * distance + 0.0001f * (distance * distance));
-
-    // Combine results
-    vec3 diffuse  = light.color * diffuseF  * coldif  * attenuation;
-
-    return diffuse * intensity;
-}
-#fi
-//FUNCTIONS
-//**********************************************************************************************************************
-
-#if (PLIGHTS)
-// Calculates the point light color contribution
-vec3 calcPointLight (vec3 VPos_viewspace, PLight light, vec3 normal, vec3 viewDir) {
-
-    float distance = length(light.position - VPos_viewspace);
-  // AMT  if(light.distance > 0.0 && distance > light.distance) return vec3(0.0, 0.0, 0.0);
-
-    vec3 lightDir = normalize(light.position - VPos_viewspace);
-
-    // Difuse
-    float diffuseF = max(dot(lightDir, normal), 0.0f);
-
-    // Attenuation
-    //float attenuation = 1.0f / (1.0f + 0.01f * distance + 0.0001f * (distance * distance));
-    float attenuation = 1.0f;// AMT light.decay / (light.decay + 0.01f * distance + 0.0001f * (distance * distance));
-
-    // Combine results
-    // vec3 diffuse  = light.color * diffuseF  * material.diffuse  * attenuation;
-    vec3 diffuse  = light.color * diffuseF  * coldif  * attenuation;
-
-    return diffuse;
-}
-#fi
-
 //MAIN
 //**********************************************************************************************************************
 void main() {
     // Position of the origin in viewspace.
     vec3 VPos_final;
     vec3 VPos_local = vec3(ShapeSize.x, ShapeSize.y, ShapeSize.z) * VPos;
+    // Diffuse color
+    vec3 coldif;
 
     #if (INSTANCED)
         int iID = gl_InstanceID;
@@ -242,23 +109,32 @@ void main() {
         coldif.g = float((uint(0xff00) & rgba) >> 8) / 255.0;
         coldif.b = float((uint(0xff) & rgba) >> 0) / 255.0;
 
+        mat3 mmat = mat3(1.0);
         #if (SCALE_PER_INSTANCE)
             vec4 scale = texelFetchOffset(material.instanceData0, tc, 0, ivec2(1, 0));
             VPos_final = pos.xyz + VPos_local * scale.xyz;
         #else if (MAT4_PER_INSTANCE)
-            mat3 mmat = mat3(texelFetchOffset(material.instanceData0, tc, 0, ivec2(1, 0)).xyz,
-                             texelFetchOffset(material.instanceData0, tc, 0, ivec2(2, 0)).xyz,
-                             texelFetchOffset(material.instanceData0, tc, 0, ivec2(3, 0)).xyz);
+            mmat = mat3(texelFetchOffset(material.instanceData0, tc, 0, ivec2(1, 0)).xyz,
+                        texelFetchOffset(material.instanceData0, tc, 0, ivec2(2, 0)).xyz,
+                        texelFetchOffset(material.instanceData0, tc, 0, ivec2(3, 0)).xyz);
             VPos_final = pos.xyz + mmat * VPos_local;
         #else
             VPos_final = pos.xyz + VPos_local;
         #fi
+
+        #if (!NORMAL_FLAT)
+            fragVNorm = vec3(NMat * mmat * VNorm);
+        #fi
+
         #if (PICK_MODE_UINT)
             InstanceID = uint(iID);
         #fi
     #else
         VPos_final = VPos_local;
         coldif = material.diffuse;
+        #if (!NORMAL_FLAT)
+            fragVNorm = vec3(NMat * VNorm);
+        #fi
     #fi
 
     vec4 VPos_viewspace = MVMat * vec4(VPos_final, 1.0);
@@ -267,15 +143,11 @@ void main() {
     // will scale them (for centered sprite there should be a quad with x, y = +-0.5).
     gl_Position = PMat * VPos_viewspace;
 
-    #if (PLIGHTS)
-        // Pass vertex position to fragment shader
-        fragVPos = vec3(VPos_viewspace) / VPos_viewspace.w;
-    #fi
+    // Pass vertex position to fragment shader
+    fragVPos = vec3(VPos_viewspace) / VPos_viewspace.w;
 
-    //#if (COLORS)
-        // Pass vertex color to fragment shader
-        fragVColor = vec4(coldif, 1.0);
-    //#fi
+    // Pass vertex color to fragment shader
+    fragVColor = vec4(coldif, 1.0);
 
     #if (TEXTURE)
         // Pass uv coordinate to fragment shader
@@ -291,54 +163,5 @@ void main() {
 
         float dToCam = length(VPos_viewspace.xyz);
         v_ViewDirection_viewspace = -VPos_viewspace.xyz / dToCam;
-    #fi
-
-    // define colors for fragment shader
-    //
-    vec4 combined = vec4(ambient + material.emissive, material.alpha);
-#if (MAT4_PER_INSTANCE)
-    vec3 normal = normalize(NMat * mmat * VNorm);
-#else
-    vec3 normal = normalize(NMat * VNorm);
-#fi
-    vec3 viewDir = normalize(-VPos_viewspace.xyz);
-
-    #if (DLIGHTS)
-        vec3 dLight;
-        float dShadow = 0.0;
-
-        #for lightIdx in 0 to NUM_DLIGHTS
-            dLight = calcDirectLight(dLights[##lightIdx], normal, viewDir);
-            combined.rgb += dLight;
-        #end
-    #fi
-    #if (PLIGHTS)
-        vec3 pLight;
-        float pShadow = 0.0;
-
-        #for lightIdx in 0 to NUM_PLIGHTS
-            pLight = calcPointLight(VPos_viewspace.xyz, pLights[##lightIdx], normal, viewDir);
-           // combined.rgb += pLight;
-        #end
-    #fi
-    #if (SLIGHTS)
-        vec3 sLight;
-        float sShadow = 0.0;
-
-        #for lightIdx in 0 to NUM_SLIGHTS
-            sLight = calcSpotLight(VPos_viewspace.xyz, sLights[##lightIdx], normal, viewDir);
-            combined.rgb += sLight;
-        #end
-    #fi
-
-   //  #if (!NORMAL_MAP && !NORMAL_FLAT)
-    #if (NORMAL_MAP && !NORMAL_FLAT)// ?? AMT TMP HACK for the FLATNOTMAL prop bug!!!!!
-        // Transform normal
-        #if (!INSTANCED)
-           fragVNorm = vec3(NMat * VNorm);
-        #fi
-        #if (INSTANCED)
-           fragVNorm = vec3(NMat * mat3(MMat) * VNorm);
-        #fi
     #fi
  }
