@@ -60,12 +60,6 @@ struct Material {
 
 uniform Material material;
 
-#if (TRANSPARENT)
-    uniform float alpha;
-#else
-    float alpha = 1.0;
-#fi
-
 #if (DLIGHTS)
     uniform DLight dLights[##NUM_DLIGHTS];
 #fi
@@ -75,18 +69,13 @@ uniform Material material;
 #fi
 uniform vec3 ambient;
 
-#if (PLIGHTS)
 in vec3 fragVPos;
-#fi
-// AMT again what is dependent with plights
-#if (!NORMAL_MAP && !NORMAL_FLAT)
-in vec3 fragVNorm;
+
+#if (!NORMAL_FLAT)
+    in vec3 fragVNorm;
 #fi
 
-
-#if (COLORS)
-#fi
-in vec4 fragVColor; // AMT take it out from color define
+in vec4 fragVColor;
 
 #if (TEXTURE)
     in vec2 fragUV;
@@ -127,8 +116,6 @@ in vec4 fragVColor; // AMT take it out from color define
     in vec3 vViewPosition;
 #fi
 
-// in vec4 v_VColor;
-
 
 //FUNCTIONS
 //**********************************************************************************************************************
@@ -140,6 +127,37 @@ float calcAttenuation(float constant, float linear, float quadratic, float dista
 }
 #fi
 
+#if (DLIGHTS)
+vec3 calcDirectLight (DLight light, vec3 normal, vec3 viewDir) {
+
+    //vec3 lightDir = normalize(light.position);
+    vec3 lightDir = normalize(-light.direction);
+
+    // Difuse
+    float diffuseF = max(dot(normal, lightDir), 0.0f);
+
+    // Specular
+    //vec3 reflectDir = reflect(-lightDir, normal);
+    //float specularF = pow(max(dot(viewDir, reflectDir), 0.0f), material.shininess);
+    float specularF;
+    if(material.blinn)
+    {
+        vec3 halfwayDir = normalize(lightDir + viewDir);
+        specularF = pow(max(dot(normal, halfwayDir), 0.0), material.shininess);
+    }
+    else
+    {
+        vec3 reflectDir = reflect(-lightDir, normal);
+        specularF = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+    }
+
+    // Combine results
+    vec3 diffuse  = light.color * diffuseF  * fragVColor.rgb;
+    vec3 specular = light.color * specularF * material.specular;
+
+    return (diffuse + specular);
+}
+#fi
 
 #if (PLIGHTS)
 // Calculates the point light color contribution
@@ -172,13 +190,7 @@ vec3 calcPointLight (PLight light, vec3 normal, vec3 viewDir) {
     float attenuation = 1.0; // calcAttenuation(light.constant, light.linear, light.quadratic, distance);
 
     // Combine results
-    // vec3 diffuse  = light.color * diffuseF  * material.diffuse  * attenuation;
-    // vec3 specular = light.color * specularF * material.specular * attenuation;
-   // #if (COLORS)
-        vec3 diffuse  = light.color * diffuseF  * (fragVColor.rgb) * attenuation;
-    //#else
-    //    vec3 diffuse  = light.color * diffuseF  * material.diffuse  * attenuation;
-    //#fi
+    vec3 diffuse  = light.color * diffuseF  * fragVColor.rgb * attenuation;
     vec3 specular = light.color * specularF * material.specular * attenuation;
 
     return (diffuse + specular);
@@ -197,8 +209,6 @@ void main() {
         }
         if ( clipped ) discard;
     #fi
-
- //  vec4 color = v_VColor;
 
     #if (OUTLINE)
         vn_viewspace = vec4(v_normal_viewspace, 0.0);
@@ -221,57 +231,46 @@ void main() {
     #else
 
     // AMT additions
-    #if (!NORMAL_MAP)
-        #if (NORMAL_FLAT)
-            vec3 fdx = dFdx(fragVPos);
-            vec3 fdy = dFdy(fragVPos);
-            vec3 normal = normalize(cross(fdx, fdy));
+    #if (NORMAL_FLAT)
+        vec3 fdx = dFdx(fragVPos);
+        vec3 fdy = dFdy(fragVPos);
+        vec3 normal = normalize(cross(fdx, fdy));
 
-            //vec3 viewDir = vec3(0.0, 0.0, -1.0); //view direction in viewspace!
-        #else if (!NORMAL_FLAT)
-            vec3 normal = normalize(fragVNorm);
-        #fi
-
-        vec3 viewDir = normalize(-fragVPos);
-
-        #if (HEIGHT_MAP)
-            texCoords = parallaxOffset(texCoords, viewDir);
-            if(texCoords.x > 1.0 || texCoords.y > 1.0 || texCoords.x < 0.0 || texCoords.y < 0.0) discard;
-        #fi
+        //vec3 viewDir = vec3(0.0, 0.0, -1.0); //view direction in viewspace!
     #else
-        vec3 viewDir = normalize(-v_position_tangentspace);
+        vec3 normal = normalize(fragVNorm);
+    #fi
 
-        #if (HEIGHT_MAP)
-            texCoords = parallaxOffset(texCoords, viewDir);
-            if(texCoords.x > 1.0 || texCoords.y > 1.0 || texCoords.x < 0.0 || texCoords.y < 0.0) discard;
-        #fi
+    vec3 viewDir = normalize(-fragVPos);
 
-        vec3 normal = texture(material.normalMap, texCoords).rgb;
-        normal = normal*2.0 - 1.0;
-        normal = normalize(normal);
+    #if (HEIGHT_MAP)
+        texCoords = parallaxOffset(texCoords, viewDir);
+        if(texCoords.x > 1.0 || texCoords.y > 1.0 || texCoords.x < 0.0 || texCoords.y < 0.0) discard;
     #fi
 
     // Calculate combined light contribution
-    #if (!DIFFUSE_MAP)
-        vec3 combined = ambient;
-    #else
-        vec3 combined = ambient * texture(material.diffuseMap, texCoords).rgb;
+    vec3 combined = ambient + material.emissive;
+
+    #if (DLIGHTS)
+        vec3 dLight;
+
+        #for lightIdx in 0 to NUM_DLIGHTS
+            dLight = calcDirectLight(dLights[##lightIdx], normal, viewDir);
+
+            combined += dLight;
+        #end
     #fi
 
     #if (PLIGHTS)
         vec3 pLight;
-        float pShadow = 0.0;
 
         #for lightIdx in 0 to NUM_PLIGHTS
-            #if (!NORMAL_MAP)
             pLight = calcPointLight(pLights[##lightIdx], normal, viewDir);
-            #else
-            pLight = calcPointLight_tangentspace(pLights[##lightIdx], v_pLightPosition_tangentspace[##lightIdx], viewDir, v_position_tangentspace, normal, texCoords);
-            #fi
 
-            combined += pLight * (1.0 - pShadow);
+            combined += pLight;
         #end
-        outColor = vec4(combined, alpha);
     #fi
+
+    outColor = vec4(combined, material.alpha);
 #fi
 }
