@@ -611,6 +611,7 @@ export class REveCameraControls extends EventDispatcher {
 				event.preventDefault();
 				// and prevent others from consuming the event
 				event.stopImmediatePropagation();
+				scope.dispatchEvent(endEvent);
 				scope.update();
 			}
 		}
