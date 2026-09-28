@@ -324,10 +324,32 @@ export class PerspectiveCamera extends Camera {
 		check(m.x, m.y, M.z);
 		check(m.x, M.y, M.z);
 		// console.log("optimizeNearFar after calc:", n, f);
-		if (n < 1) n = 1;
-		if (f < n) f = n;
-		this._near = 0.999 * n;
-		this._far = 1.001 * f;
+
+		// Pad by a fraction of the box's own size rather than a fixed 0.1%
+		// of the computed depth range. This runs on every render, and a
+		// margin that thin clips anything sitting close to the true depth
+		// extremes -- a flat face exactly on the bbox boundary, a marker
+		// drawn at a shape's surface -- on nothing more than ordinary
+		// floating-point jitter, re-clipping it every single frame.
+		let diag = m.distanceTo(M);
+		let depthRange = Math.max(f - n, 1e-6);
+		let pad = Math.max(0.01 * depthRange, 1e-5 * diag, 1e-6);
+		n -= pad;
+		f += pad;
+
+		// near must stay positive and clear of true zero or the projection
+		// matrix blows up, but the floor needs to scale with the content:
+		// the previous fixed "near >= 1" forced the near plane out to 1
+		// world unit regardless of camera distance, which for small-scale
+		// geometry (an overlap a fraction of a cm across, say) clips
+		// straight through it as soon as you dolly in close enough to
+		// actually inspect it.
+		let nearFloor = Math.max(1e-4 * diag, 1e-6);
+		if (n < nearFloor) n = nearFloor;
+		if (f < n) f = n + pad;
+
+		this._near = n;
+		this._far = f;
 		// console.log("optimizeNearFar after applied:", this._near, this._far);
 		this._updateTBLR();
 		this.updateProjectionMatrix();
