@@ -183,4 +183,8 @@ export {RenderArrayManager} from '../renderers/RenderArrayManager.js';
 // REve specifics
 
 export {RendeQuTor} from './RendeQuTor.js';
-export {REveCameraControls} from './REveCameraControls.js';
+// REveCameraControls moved to ROOT's own ui5/eve7/lib/REveCameraControls.js
+// (2026-09-28) -- it only ever used the generic math/core primitives
+// exported above, not anything RenderCore-internal, and living in ROOT's
+// tracked tree means camera fixes no longer need the RC-symlink manual
+// copy workaround to reach a running server.
